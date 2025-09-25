@@ -1,0 +1,120 @@
+# Configuration for competitor websites
+# Each site has selectors and settings for scraping
+
+sites:
+  bigbasket:
+    name: "BigBasket"
+    base_url: "https://www.bigbasket.com"
+    enabled: true
+    rate_limit: 2.0  # seconds between requests
+    use_playwright: true  # requires JavaScript
+    categories:
+      - vegetables: "/pc/fresh-produce/fresh-vegetables/"
+      - fruits: "/pc/fresh-produce/fresh-fruits/"
+      - dairy: "/pc/dairy/"
+      - grains: "/pc/foodgrains-oil-masala/rice-rice-products/"
+    
+    selectors:
+      product_container: ".product"
+      name: ".product-name"
+      price: ".discounted-price"
+      unit: ".unit"
+      brand: ".brand"
+      image: ".product-image img"
+      availability: ".add-button"
+      
+    headers:
+      User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      
+    pagination:
+      type: "scroll"  # or "click" or "url"
+      max_pages: 5
+      
+  jiomart:
+    name: "JioMart"
+    base_url: "https://www.jiomart.com"
+    enabled: true
+    rate_limit: 1.5
+    use_playwright: true
+    categories:
+      - vegetables: "/c/fruits-vegetables/fresh-vegetables/"
+      - fruits: "/c/fruits-vegetables/fresh-fruits/"
+      - dairy: "/c/dairy-bakery/"
+      - grains: "/c/grocery/rice-products/"
+    
+    selectors:
+      product_container: ".plp-card"
+      name: ".plp-card-title"
+      price: ".jm-heading-xxs"
+      unit: ".plp-product-quantity"
+      brand: ".plp-card-brand"
+      image: ".plp-card-image img"
+      availability: ".add-to-cart-btn"
+      
+  amazon_fresh:
+    name: "Amazon Fresh"
+    base_url: "https://www.amazon.in"
+    enabled: true
+    rate_limit: 3.0  # Amazon is strict
+    use_playwright: true
+    categories:
+      - vegetables: "/s?k=fresh+vegetables"
+      - fruits: "/s?k=fresh+fruits"  
+      - dairy: "/s?k=dairy+products"
+      - grains: "/s?k=rice+grains"
+    
+    selectors:
+      product_container: "[data-component-type='s-search-result']"
+      name: "h2 a span"
+      price: ".a-price-whole"
+      unit: ".a-size-base-plus"
+      brand: ".a-size-base-plus .a-text-bold"
+      image: ".s-image"
+      availability: ".a-button-text"
+      
+    headers:
+      User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      Accept-Language: "en-US,en;q=0.9"
+      
+  flipkart_grocery:
+    name: "Flipkart Grocery"
+    base_url: "https://www.flipkart.com"
+    enabled: true
+    rate_limit: 2.0
+    use_playwright: true
+    categories:
+      - vegetables: "/grocery-supermart-store"
+      - fruits: "/grocery-supermart-store"
+      - dairy: "/grocery-supermart-store"
+      - grains: "/grocery-supermart-store"
+    
+    selectors:
+      product_container: "._1AtVbE"
+      name: "._4rR01T"
+      price: "._30jeq3"
+      unit: "._3Djpdu"
+      brand: "._2WkVRV"
+      image: "._396cs4 img"
+      availability: "._2KpZ6l"
+
+# Global settings
+global:
+  max_concurrent_requests: 3
+  request_timeout: 30
+  retry_attempts: 3
+  retry_delay: 2.0
+  
+  # Proxy settings (if needed)
+  use_proxy: false
+  proxy_list: []
+  
+  # Rate limiting
+  global_rate_limit: 0.5  # minimum delay between any requests
+  
+  # Browser settings for Playwright
+  browser:
+    headless: true
+    viewport:
+      width: 1920
+      height: 1080
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
