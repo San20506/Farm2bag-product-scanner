@@ -1,0 +1,199 @@
+# Configuration for product normalization and comparison rules
+
+# Unit mappings - standardize different unit representations
+unit_mappings:
+  # Weight units (standardize to kg)
+  "kilogram": "kg"
+  "kilograms": "kg"
+  "kilo": "kg"
+  "gram": "g"
+  "grams": "g"
+  "gm": "g"
+  
+  # Volume units (standardize to liter)
+  "litre": "liter"
+  "litres": "liter"
+  "ltr": "liter"
+  "l": "liter"
+  "ml": "ml"
+  "milliliter": "ml"
+  "millilitre": "ml"
+  
+  # Count units
+  "pieces": "piece"
+  "pcs": "piece"
+  "pc": "piece"
+  "each": "piece"
+  "item": "piece"
+  "unit": "piece"
+  "nos": "piece"
+  "number": "piece"
+  
+  # Pack units
+  "packet": "pack"
+  "packets": "pack"
+  "pkg": "pack"
+  "package": "pack"
+  "packages": "pack"
+  "box": "pack"
+  "boxes": "pack"
+  "carton": "pack"
+  "bundle": "pack"
+  
+  # Dozen
+  "dozen": "dozen"
+  "dzn": "dozen"
+  "dz": "dozen"
+
+# Brand name aliases - map similar brand names
+brand_aliases:
+  "farm2bag":
+    - "farm2bag"
+    - "farm 2 bag" 
+    - "farm2bag fresh"
+    - "farm2bag organic"
+    
+  "amul":
+    - "amul"
+    - "amul dairy"
+    - "amul fresh"
+    
+  "mother dairy":
+    - "mother dairy"
+    - "motherdairy" 
+    - "md"
+    
+  "britannia":
+    - "britannia"
+    - "britannia industries"
+    
+  "tata":
+    - "tata"
+    - "tata consumer"
+    - "tata sampann"
+    
+  "nestle":
+    - "nestle"
+    - "nestlé"
+    - "nestle india"
+
+# Category mappings - standardize category names
+category_mappings:
+  # Vegetables
+  "vegetables": "vegetables"
+  "fresh vegetables": "vegetables"
+  "veggies": "vegetables"
+  "vegetable": "vegetables"
+  "fresh veggies": "vegetables"
+  
+  # Fruits
+  "fruits": "fruits"
+  "fresh fruits": "fruits"
+  "fruit": "fruits"
+  "seasonal fruits": "fruits"
+  
+  # Dairy
+  "dairy": "dairy"
+  "dairy products": "dairy"
+  "milk products": "dairy"
+  "dairy & bakery": "dairy"
+  
+  # Grains & Rice
+  "grains": "grains"
+  "rice": "grains"
+  "rice products": "grains"
+  "cereals": "grains"
+  "foodgrains": "grains"
+  "pulses": "grains"
+  
+  # Bakery
+  "bakery": "bakery"
+  "bread": "bakery"
+  "biscuits": "bakery"
+  "cookies": "bakery"
+  
+  # General/Others
+  "grocery": "general"
+  "general": "general"
+  "others": "general"
+  "miscellaneous": "general"
+
+# Product name cleaning rules
+name_cleaners:
+  # Remove common promotional text
+  - pattern: '\b(fresh|organic|premium|best|quality|grade\s*a|farm\s*fresh)\b'
+    replacement: ''
+    
+  # Remove size mentions from name (will be extracted separately)
+  - pattern: '\b\d+\s*(kg|g|liter|l|ml|piece|pack|dozen)\b'
+    replacement: ''
+    
+  # Remove brand mentions that appear in product names
+  - pattern: '\b(farm2bag|amul|mother\s*dairy|britannia|tata|nestle)\b'
+    replacement: ''
+    
+  # Remove extra spaces and clean up
+  - pattern: '\s+'
+    replacement: ' '
+    
+  # Remove common words that don't add value
+  - pattern: '\b(the|and|or|for|with|without|free|natural)\b'
+    replacement: ''
+
+# Size extraction patterns
+size_patterns:
+  # Weight patterns (grams to kg conversion)
+  - pattern: '(\d+(?:\.\d+)?)\s*g(?:rams?)?'
+    unit_type: 'weight'
+    conversion: 0.001  # grams to kg
+    
+  - pattern: '(\d+(?:\.\d+)?)\s*kg'
+    unit_type: 'weight' 
+    conversion: 1.0    # already in kg
+    
+  # Volume patterns (ml to liter conversion)
+  - pattern: '(\d+(?:\.\d+)?)\s*ml'
+    unit_type: 'volume'
+    conversion: 0.001  # ml to liter
+    
+  - pattern: '(\d+(?:\.\d+)?)\s*(?:l|liter|litre)'
+    unit_type: 'volume'
+    conversion: 1.0    # already in liter
+    
+  # Count patterns
+  - pattern: '(\d+)\s*(?:piece|pcs?|item|unit|nos?)'
+    unit_type: 'count'
+    conversion: 1.0
+    
+  - pattern: '(\d+)\s*(?:pack|packet|box|bundle)'
+    unit_type: 'pack'
+    conversion: 1.0
+    
+  # Special patterns
+  - pattern: '(\d+)\s*dozen'
+    unit_type: 'dozen'
+    conversion: 12     # dozen to pieces
+
+# Comparison settings
+comparison:
+  # Fuzzy matching thresholds
+  matching_threshold: 75        # Minimum similarity score for matching
+  exact_match_bonus: 10         # Bonus points for exact name matches
+  
+  # Matching weights
+  weight_name: 0.7             # Weight for product name similarity
+  weight_brand: 0.2            # Weight for brand similarity  
+  weight_category: 0.1         # Weight for category matching
+  
+  # Price comparison settings
+  significant_price_difference: 5.0    # Minimum % difference to highlight
+  max_reasonable_difference: 200.0     # Flag differences above this %
+  
+  # Normalization settings
+  remove_stopwords: true
+  case_sensitive: false
+  
+  # Advanced matching options
+  use_phonetic_matching: false         # Use soundex/metaphone for names
+  allow_partial_matches: true          # Allow substring matches
+  min_name_length: 3                   # Minimum name length to consider
