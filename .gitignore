@@ -77,4 +77,4 @@ agenthub/agents/youtube/db
 .cache/
 
 # Mobile development
-android-sdk/ 
+android-sdk/ grocery_price_scraper/venv/lib/python3.11/site-packages/playwright/driver/node

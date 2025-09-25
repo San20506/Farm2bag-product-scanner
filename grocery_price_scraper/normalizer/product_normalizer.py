@@ -214,10 +214,14 @@ class ProductNormalizer:
         Returns:
             Price per standard unit
         """
+        # Ensure price is numeric
+        if isinstance(price, str):
+            price = self._parse_price(price)
+        
         if not price or not size or size == 0:
             return 0.0
         
-        return price / size
+        return float(price) / float(size)
     
     def normalize_batch(self, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
