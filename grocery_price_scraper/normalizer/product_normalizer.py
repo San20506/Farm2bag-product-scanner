@@ -229,6 +229,33 @@ class ProductNormalizer:
         
         return float(price) / float(size)
     
+    def _parse_price(self, price_text: str) -> float:
+        """
+        Parse price from text, handling different formats.
+        
+        Args:
+            price_text: Price string from website
+            
+        Returns:
+            Price as float, 0.0 if parsing fails
+        """
+        if not price_text:
+            return 0.0
+        
+        try:
+            # Remove common currency symbols and whitespace
+            cleaned = price_text.replace('₹', '').replace('$', '').replace(',', '').strip()
+            
+            # Extract numbers (including decimals)
+            import re
+            match = re.search(r'\d+\.?\d*', cleaned)
+            if match:
+                return float(match.group())
+        except Exception as e:
+            logger.debug(f"Failed to parse price '{price_text}': {e}")
+        
+        return 0.0
+    
     def normalize_batch(self, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Normalize a batch of products.
