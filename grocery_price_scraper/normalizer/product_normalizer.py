@@ -248,12 +248,16 @@ class ProductNormalizer:
             except Exception as e:
                 logger.error(f"Failed to normalize product {product.get('name', 'Unknown')}: {e}")
                 # Add original product with minimal normalization
+                price = product.get('price', 0.0)
+                if isinstance(price, str):
+                    price = self._parse_price(price)
+                
                 product['normalized_name'] = product.get('name', '').lower()
                 product['normalized_unit'] = product.get('unit', 'piece')
                 product['normalized_size'] = 1.0
                 product['normalized_brand'] = product.get('brand', '').lower()
                 product['normalized_category'] = product.get('category', 'general')
-                product['price_per_unit'] = product.get('price', 0.0)
+                product['price_per_unit'] = price  # Use parsed price
                 normalized_products.append(product)
         
         logger.info(f"Normalized {len(normalized_products)} products")
