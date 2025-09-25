@@ -79,3 +79,7 @@ agenthub/agents/youtube/db
 # Mobile development
 android-sdk/ grocery_price_scraper/venv/lib/python3.11/site-packages/playwright/driver/node
 grocery_price_scraper/venv/lib/python3.11/site-packages/playwright/driver/node
+-e 
+# Environment files
+*.env
+*.env.*
