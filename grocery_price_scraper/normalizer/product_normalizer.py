@@ -55,9 +55,15 @@ class ProductNormalizer:
         # Normalize category
         normalized['normalized_category'] = self.normalize_category(product.get('category', ''))
         
+        # Parse price if it's a string
+        price = product.get('price', 0.0)
+        if isinstance(price, str):
+            price = self._parse_price(price)
+        normalized['price'] = price
+        
         # Calculate price per standard unit
         normalized['price_per_unit'] = self.calculate_price_per_unit(
-            product.get('price', 0.0),
+            price,
             normalized_unit,
             normalized_size
         )
