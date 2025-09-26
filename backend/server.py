@@ -78,6 +78,12 @@ async def startup_event():
         # Initialize scraper services with database
         init_scraper_services(db)
         
+        # Initialize product service
+        init_product_service()
+        
+        # Initialize JWT auth service
+        init_jwt_auth_service(db)
+        
         # Start scheduler service
         from scraper_routes import scheduler_service
         if scheduler_service:
@@ -85,10 +91,10 @@ async def startup_event():
             scheduler_service_instance = scheduler_service
             logger.info("Scheduler service started successfully")
         
-        logger.info("All scraper services initialized successfully")
+        logger.info("All services initialized successfully")
         
     except Exception as e:
-        logger.error(f"Failed to initialize scraper services: {e}")
+        logger.error(f"Failed to initialize services: {e}")
 
 
 @app.on_event("shutdown")
