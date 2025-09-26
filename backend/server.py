@@ -63,6 +63,8 @@ async def get_status_checks():
 # Include the routers in the main app
 app.include_router(api_router)
 app.include_router(scraper_router)
+app.include_router(product_router)
+app.include_router(auth_router)
 
 # Initialize scraper services
 scheduler_service_instance = None
