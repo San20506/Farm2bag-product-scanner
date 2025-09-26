@@ -10,6 +10,10 @@ from typing import List
 import uuid
 from datetime import datetime
 
+# Import scraper components
+from scraper_routes import scraper_router, init_scraper_services
+from scheduler_service import SchedulerService
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
