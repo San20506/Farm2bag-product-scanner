@@ -68,6 +68,29 @@ async def get_products(
         raise HTTPException(status_code=500, detail=f"Failed to get products: {str(e)}")
 
 
+@product_router.get("/products/search", response_model=List[ProductResponse])  
+async def search_products(
+    q: str = Query(..., min_length=2, description="Search query"),
+    limit: int = Query(20, ge=1, le=50, description="Maximum results"),
+    key_id: str = Depends(get_current_key_id)
+):
+    """
+    Search products by name or description.
+    
+    Provides fast search functionality for the frontend search bar.
+    Returns basic product information for search results.
+    """
+    if not product_service or not product_service.is_available():
+        raise HTTPException(status_code=503, detail="Product service not available")
+    
+    try:
+        products = await product_service.search_products(q, limit)
+        return products
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
 @product_router.get("/products/{product_id}", response_model=ProductDetailResponse)
 async def get_product_details(
     product_id: int,
@@ -94,29 +117,6 @@ async def get_product_details(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get product details: {str(e)}")
-
-
-@product_router.get("/products/search", response_model=List[ProductResponse])  
-async def search_products(
-    q: str = Query(..., min_length=2, description="Search query"),
-    limit: int = Query(20, ge=1, le=50, description="Maximum results"),
-    key_id: str = Depends(get_current_key_id)
-):
-    """
-    Search products by name or description.
-    
-    Provides fast search functionality for the frontend search bar.
-    Returns basic product information for search results.
-    """
-    if not product_service or not product_service.is_available():
-        raise HTTPException(status_code=503, detail="Product service not available")
-    
-    try:
-        products = await product_service.search_products(q, limit)
-        return products
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @product_router.get("/prices/{product_id}", response_model=List[CompetitorPrice])
