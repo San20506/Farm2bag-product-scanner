@@ -84,9 +84,10 @@ class PriceHistory(BaseModel):
 class ProductSearchResponse(BaseModel):
     """Response for product search."""
     products: List[ProductResponse]
-    total_count: int
+    total: int  # Changed from total_count to match frontend expectations
     page: int
     page_size: int
+    total_pages: int  # Added for frontend pagination
     categories: List[str]
     sites: List[str]
 
