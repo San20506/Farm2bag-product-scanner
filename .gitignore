@@ -95,3 +95,7 @@ grocery_price_scraper/venv/lib/python3.11/site-packages/playwright/driver/node
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
