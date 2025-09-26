@@ -395,7 +395,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Basic React App Loading"
+    - "Backend API Integration"
+    - "Environment Configuration"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
