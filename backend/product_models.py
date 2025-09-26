@@ -115,8 +115,8 @@ class ProductListQuery(BaseModel):
     search: Optional[str] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
-    sort_by: str = Field("name", regex="^(name|price|scraped_at|price_per_unit)$")
-    sort_order: str = Field("asc", regex="^(asc|desc)$")
+    sort_by: str = Field("name", pattern="^(name|price|scraped_at|price_per_unit)$")
+    sort_order: str = Field("asc", pattern="^(asc|desc)$")
 
 
 # Update forward references
