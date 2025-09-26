@@ -126,7 +126,7 @@ class JWTAuthService:
             
         except jwt.ExpiredSignatureError:
             return None
-        except jwt.JWTError:
+        except jwt.InvalidTokenError:
             return None
     
     async def create_user(self, user_data: UserCreate) -> UserResponse:
