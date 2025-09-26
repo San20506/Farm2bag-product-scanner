@@ -14,6 +14,10 @@ from datetime import datetime
 from scraper_routes import scraper_router, init_scraper_services
 from scheduler_service import SchedulerService
 
+# Import new product and auth components
+from product_routes import product_router, init_product_service
+from auth_routes import auth_router, init_jwt_auth_service
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
