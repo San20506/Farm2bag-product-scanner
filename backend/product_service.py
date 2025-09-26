@@ -167,9 +167,10 @@ class ProductService:
             logger.error(f"Failed to get products: {e}")
             return ProductSearchResponse(
                 products=[], 
-                total_count=0, 
+                total=0,  # Changed from total_count to total
                 page=query.page,
                 page_size=query.page_size,
+                total_pages=0,  # Added total_pages
                 categories=[],
                 sites=[]
             )
