@@ -56,8 +56,52 @@ async def get_status_checks():
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
-# Include the router in the main app
+# Include the routers in the main app
 app.include_router(api_router)
+app.include_router(scraper_router)
+
+# Initialize scraper services
+scheduler_service_instance = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup."""
+    global scheduler_service_instance
+    
+    try:
+        # Initialize scraper services with database
+        init_scraper_services(db)
+        
+        # Start scheduler service
+        from scraper_routes import scheduler_service
+        if scheduler_service:
+            await scheduler_service.start()
+            scheduler_service_instance = scheduler_service
+            logger.info("Scheduler service started successfully")
+        
+        logger.info("All scraper services initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize scraper services: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    global scheduler_service_instance
+    
+    try:
+        # Stop scheduler service
+        if scheduler_service_instance:
+            await scheduler_service_instance.stop()
+            logger.info("Scheduler service stopped")
+        
+        # Close database connection
+        client.close()
+        logger.info("Database connection closed")
+        
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 app.add_middleware(
     CORSMiddleware,
