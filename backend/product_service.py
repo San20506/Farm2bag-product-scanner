@@ -149,11 +149,15 @@ class ProductService:
                 """)
                 sites = [row[0] for row in cursor.fetchall()]
                 
+                # Calculate total pages
+                total_pages = (total_count + query.page_size - 1) // query.page_size
+                
                 return ProductSearchResponse(
                     products=products,
-                    total_count=total_count,
+                    total=total_count,  # Changed from total_count to total
                     page=query.page,
                     page_size=query.page_size,
+                    total_pages=total_pages,  # Added total_pages
                     categories=categories,
                     sites=sites
                 )
