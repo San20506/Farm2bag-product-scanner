@@ -350,9 +350,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "REST API Layer (Phase 3)"
-    - "Automated Scheduling (Phase 3)"
-    - "Real Competitor Scrapers"
+    - "Frontend Product Catalog API Endpoints (Phase 4)"
+    - "JWT Authentication System (Phase 4)"
+    - "Auth Routes and User Management (Phase 4)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
