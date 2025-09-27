@@ -328,7 +328,7 @@ yarn test
 ### Contact Information
 - **GitHub Issues**: [Create an Issue](https://github.com/San20506/Farm2bag-product-scanner/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/San20506/Farm2bag-product-scanner/discussions)
-- **Email**: [your-email@domain.com](mailto:your-email@domain.com)
+- **Email**: [m.santhosh200506@gmail.com](mailto:m.santhosh200506@gmail.com)
 
 ## 📄 License
 
