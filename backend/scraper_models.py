@@ -1,5 +1,5 @@
 """
-Pydantic models for the grocery price scraper API.
+Pydantic models for the product price scraper API.
 """
 
 from pydantic import BaseModel, Field
@@ -26,8 +26,8 @@ class ScheduleInterval(str, Enum):
 
 class ScrapeRequest(BaseModel):
     """Request model for scraping operations."""
-    categories: Optional[List[str]] = Field(None, description="Categories to scrape (vegetables, fruits, dairy, grains)")
-    sites: Optional[List[str]] = Field(None, description="Sites to scrape (bigbasket, jiomart, amazon_fresh, flipkart_grocery)")
+    categories: Optional[List[str]] = Field(None, description="Categories to scrape (e.g., vegetables, fruits, dairy, grains, electronics)")
+    sites: Optional[List[str]] = Field(None, description="Sites to scrape (as configured in sites.yml)")
     generate_report: bool = Field(True, description="Whether to generate Excel report")
     store_data: bool = Field(True, description="Whether to store data in database")
 
@@ -48,8 +48,7 @@ class ScrapeResult(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     execution_time: Optional[float] = None
-    farm2bag_products: int = 0
-    competitor_products: int = 0
+    products_by_site: Dict[str, int] = {}
     total_matches: int = 0
     sites_scraped: List[str] = []
     categories_processed: List[str] = []
@@ -114,3 +113,20 @@ class ApiKeyInfo(BaseModel):
     created_at: datetime
     last_used: Optional[datetime]
     is_active: bool
+
+
+class SiteConfigCreate(BaseModel):
+    """Request model for creating/updating a scraping source site."""
+    key: str = Field(..., description="Unique identifier slug, e.g. 'bigbasket'")
+    name: str = Field(..., description="Human-readable display name")
+    base_url: str = Field(..., description="Root URL of the site, e.g. 'https://www.bigbasket.com'")
+    enabled: bool = Field(True)
+    rate_limit: float = Field(2.0, ge=0.1, le=30.0)
+    use_playwright: bool = Field(False)
+    selectors: Dict[str, str] = Field(default_factory=dict, description="CSS selectors: product_container, name, price, unit, etc.")
+    categories: List[Dict[str, str]] = Field(default_factory=list, description="List of category-path mappings")
+
+
+class SiteConfig(SiteConfigCreate):
+    """Full site configuration returned by the API."""
+    pass

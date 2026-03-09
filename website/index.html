@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceTrackerPro - Product Catalog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 3v18h18" />
+                            <path d="m19 9-5 5-4-4-3 3" />
+                        </svg>
+                    </div>
+                    <span class="logo-text"><strong>PriceTracker</strong>Pro</span>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <h3 class="nav-title">ENTERPRISE DATA</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" class="nav-item active" data-page="all-products">
+                                <span class="nav-icon">⊞</span> All Products
+                            </a></li>
+                        <li><a href="#" class="nav-item" data-page="electronics">
+                                <span class="nav-icon">⚙️</span> Electronics
+                            </a></li>
+                        <li><a href="#" class="nav-item" data-page="home-garden">
+                                <span class="nav-icon">🏠</span> Home & Garden
+                            </a></li>
+                        <li><a href="#" class="nav-item" data-page="fashion">
+                                <span class="nav-icon">👕</span> Fashion
+                            </a></li>
+                        <li><a href="#" class="nav-item" data-page="price-alerts">
+                                <span class="nav-icon">🔔</span> Price Alerts
+                            </a></li>
+                    </ul>
+                </div>
+
+                <div class="nav-section">
+                    <h3 class="nav-title">INFRASTRUCTURE</h3>
+                    <ul class="nav-list">
+                        <li><a href="#" class="nav-item" data-page="compare-products">
+                                <span class="nav-icon">🔗</span> Compare Products
+                            </a></li>
+                        <li><a href="#" class="nav-item" data-page="manage-sources">
+                                <span class="nav-icon">⎈</span> Manage Sources
+                            </a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="userProfileBtn">
+                    <div class="avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">Alex Chen</span>
+                        <span class="user-role">Admin Account</span>
+                    </div>
+                    <div class="user-actions" id="userMenuBtn">⋮</div>
+                </div>
+                <!-- User Dropdown Menu -->
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="#" class="dropdown-item" id="editProfileBtn">👤 Edit Profile</a>
+                    <a href="#" class="dropdown-item" id="accountSettingsBtn">⚙️ Account Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item logout" id="logoutBtn">🚪 Log Out</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Navbar -->
+            <header class="topbar">
+                <div class="search-container">
+                    <span class="search-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </span>
+                    <input type="text" placeholder="Search product name, SKU, or retailer..." class="search-input"
+                        id="searchInput">
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-btn" id="notificationBtn" title="Notifications">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span class="notification-dot" id="notifDot"></span>
+                    </button>
+                    <button class="icon-btn" id="settingsBtn" title="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-primary" id="exportBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Export Data
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content" id="pageContent">
+                <div class="page-header">
+                    <div class="header-titles">
+                        <h1 id="pageTitle">Product Catalog</h1>
+                        <p id="pageSubtitle">Real-time price aggregation across 42 verified retailers</p>
+                    </div>
+                    <div class="header-filters" id="headerFilters">
+                        <button class="btn btn-outline filter-btn" id="filterInStock" data-filter="instock">
+                            <span class="filter-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="21" y1="4" x2="3" y2="4" />
+                                    <line x1="21" y1="12" x2="3" y2="12" />
+                                    <line x1="21" y1="20" x2="3" y2="20" />
+                                </svg>
+                            </span>
+                            In Stock Only
+                            <span class="caret">▾</span>
+                        </button>
+                        <button class="btn btn-outline filter-btn" id="filterPriceDrop" data-filter="pricedrop">
+                            <span class="filter-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+                                    <polyline points="16 7 22 7 22 13" />
+                                </svg>
+                            </span>
+                            Price Drop > 10%
+                            <span class="caret">▾</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table Container -->
+                <div class="table-card" id="tableCard">
+                    <div class="table-responsive">
+                        <table class="data-table" id="productsTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">PRODUCT NAME & SPECS ⇅</th>
+                                    <th class="sortable" data-sort="retailerA">RETAILER A ⇅</th>
+                                    <th class="sortable" data-sort="retailerB">RETAILER B ⇅</th>
+                                    <th class="sortable" data-sort="retailerC">RETAILER C ⇅</th>
+                                    <th class="sortable" data-sort="variance" style="text-align: center;">PRICE VARIANCE
+                                        ⇅</th>
+                                    <th style="text-align: right;">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination">
+                        <span class="pagination-info" id="paginationInfo">Showing 1 to 6 of 1,240 products</span>
+                        <div class="pagination-controls" id="paginationControls">
+                            <button class="page-btn" data-action="prev">‹</button>
+                            <button class="page-btn active" data-page="1">1</button>
+                            <button class="page-btn" data-page="2">2</button>
+                            <button class="page-btn" data-page="3">3</button>
+                            <button class="page-btn" data-action="next">›</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Panel (hidden by default) -->
+            <div class="notification-panel" id="notificationPanel">
+                <div class="notif-header">
+                    <h3>Notifications</h3>
+                    <button class="notif-close" id="notifClose">✕</button>
+                </div>
+                <div class="notif-list">
+                    <div class="notif-item unread">
+                        <span class="notif-icon">📉</span>
+                        <div class="notif-content">
+                            <span class="notif-title">Price Drop Alert</span>
+                            <span class="notif-desc">Mechanical Keyboard RGB Pro dropped 13.8% at Retailer C</span>
+                            <span class="notif-time">2 mins ago</span>
+                        </div>
+                    </div>
+                    <div class="notif-item unread">
+                        <span class="notif-icon">🔄</span>
+                        <div class="notif-content">
+                            <span class="notif-title">Scrape Complete</span>
+                            <span class="notif-desc">Daily scrape finished — 1,240 products updated</span>
+                            <span class="notif-time">1 hour ago</span>
+                        </div>
+                    </div>
+                    <div class="notif-item">
+                        <span class="notif-icon">⚠️</span>
+                        <div class="notif-content">
+                            <span class="notif-title">Source Unreachable</span>
+                            <span class="notif-desc">Retailer B returned 503 during last scrape cycle</span>
+                            <span class="notif-time">3 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Panel (hidden by default) -->
+            <div class="settings-panel" id="settingsPanel">
+                <div class="settings-header">
+                    <h3>Settings</h3>
+                    <button class="settings-close" id="settingsClose">✕</button>
+                </div>
+                <div class="settings-body">
+                    <div class="setting-group">
+                        <label class="setting-label">Currency</label>
+                        <select class="setting-select" id="currencySelect">
+                            <option value="USD" selected>USD ($)</option>
+                            <option value="INR">INR (₹)</option>
+                            <option value="EUR">EUR (€)</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">Scrape Interval</label>
+                        <select class="setting-select" id="scrapeIntervalSelect">
+                            <option value="6">Every 6 hours</option>
+                            <option value="12">Every 12 hours</option>
+                            <option value="24" selected>Daily</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="darkModeToggle"> Dark Mode
+                        </label>
+                    </div>
+                    <button class="btn btn-primary btn-full" id="saveSettingsBtn">Save Settings</button>
+                </div>
+            </div>
+
+            <!-- Product Detail Modal (hidden by default) -->
+            <div class="modal-overlay" id="detailModal">
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <h2 id="modalTitle">Product Name</h2>
+                        <button class="modal-close" id="modalClose">✕</button>
+                    </div>
+                    <div class="modal-body" id="modalBody">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add/Edit Source Modal -->
+            <div class="modal-overlay" id="sourceModal">
+                <div class="modal-card" style="width:520px;">
+                    <div class="modal-header">
+                        <h2 id="sourceModalTitle">Add Source</h2>
+                        <button class="modal-close" id="sourceModalClose">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="sourceForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Display Name *</label>
+                                    <input type="text" id="srcName" placeholder="BigBasket" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Key (slug) *</label>
+                                    <input type="text" id="srcKey" placeholder="bigbasket" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Base URL *</label>
+                                <input type="url" id="srcUrl" placeholder="https://www.bigbasket.com" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Rate Limit (sec)</label>
+                                    <input type="number" id="srcRate" value="2.0" min="0.1" max="30" step="0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Playwright (JS)?</label>
+                                    <select id="srcPlaywright">
+                                        <option value="false">No — Static HTML</option>
+                                        <option value="true">Yes — JS Rendered</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h4 style="margin:12px 0 8px; font-size:13px; color:var(--text-muted);">CSS SELECTORS</h4>
+                            <div class="form-row">
+                                <div class="form-group"><label>Product Container</label><input type="text"
+                                        id="selContainer" placeholder=".product"></div>
+                                <div class="form-group"><label>Name</label><input type="text" id="selName"
+                                        placeholder=".product-name"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Price</label><input type="text" id="selPrice"
+                                        placeholder=".price"></div>
+                                <div class="form-group"><label>Unit</label><input type="text" id="selUnit"
+                                        placeholder=".unit"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-full" id="sourceSubmitBtn">Add
+                                Source</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

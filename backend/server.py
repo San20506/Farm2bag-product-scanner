@@ -134,3 +134,30 @@ logger = logging.getLogger(__name__)
 async def shutdown_db_client():
     """This is replaced by the new shutdown_event handler."""
     pass
+
+
+# ── URL-based Product Scraping (simple drop-links flow) ──────────────
+from url_scraper import scrape_multiple_urls
+
+class ScrapeUrlsRequest(BaseModel):
+    urls: List[str] = Field(..., description="List of product page URLs to scrape")
+
+@app.post("/api/scrape-urls")
+async def scrape_urls(request: ScrapeUrlsRequest):
+    """
+    Drop product URLs → auto-scrape product details → compare.
+    No config needed. Just paste links.
+    """
+    if not request.urls:
+        return {"products": [], "message": "No URLs provided"}
+    if len(request.urls) > 10:
+        return {"error": "Maximum 10 URLs per request", "products": []}
+
+    results = await scrape_multiple_urls(request.urls)
+    return {
+        "products": results,
+        "total": len(results),
+        "successful": sum(1 for r in results if r.get("success")),
+        "message": f"Scraped {len(results)} URLs"
+    }
+

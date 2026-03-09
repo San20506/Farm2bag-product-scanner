@@ -78,7 +78,7 @@ class ExcelReporter:
         sheet.title = "Executive Summary"
         
         # Title
-        sheet['A1'] = "Farm2bag Price Comparison Report"
+        sheet['A1'] = "Product Price Comparison Report"
         sheet['A1'].font = Font(size=16, bold=True)
         sheet['A2'] = f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
@@ -90,9 +90,9 @@ class ExcelReporter:
         
         metrics = [
             ("Total Products Compared", stats.get('total_matches', 0)),
-            ("Farm2bag Cheaper", stats.get('farm2bag_cheaper_count', 0)),
-            ("Competitor Cheaper", stats.get('competitor_cheaper_count', 0)),
-            ("Farm2bag Cheaper (%)", f"{stats.get('farm2bag_cheaper_percentage', 0):.1f}%"),
+            ("Source Cheaper", stats.get('source_cheaper_count', 0)),
+            ("Target Cheaper", stats.get('target_cheaper_count', 0)),
+            ("Source Cheaper (%)", f"{stats.get('source_cheaper_percentage', 0):.1f}%"),
             ("Average Price Difference", f"{stats.get('average_price_difference_percentage', 0):.1f}%"),
             ("Maximum Savings", f"{abs(stats.get('max_savings_percentage', 0)):.1f}%"),
         ]
@@ -113,21 +113,22 @@ class ExcelReporter:
             # Sort by biggest savings (most negative percentage difference)
             top_savings = sorted(matches, key=lambda x: x['price_comparison']['percentage_difference'])[:5]
             
-            headers = ['Product', 'Farm2bag Price', 'Competitor Price', 'Savings %', 'Site']
+            headers = ['Product', 'Source Site', 'Source Price', 'Target Site', 'Target Price', 'Savings %']
             for col, header in enumerate(headers, 1):
                 cell = sheet.cell(row=13, column=col, value=header)
                 cell.font = Font(bold=True)
                 cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
             
             for row, match in enumerate(top_savings, 14):
-                sheet.cell(row, 1, match['farm2bag_product']['name'])
-                sheet.cell(row, 2, f"₹{match['price_comparison']['farm2bag_price']:.2f}")
-                sheet.cell(row, 3, f"₹{match['price_comparison']['competitor_price']:.2f}")
-                sheet.cell(row, 4, f"{abs(match['price_comparison']['percentage_difference']):.1f}%")
-                sheet.cell(row, 5, match['competitor_product']['comparison_site'])
+                sheet.cell(row, 1, match['source_product']['name'])
+                sheet.cell(row, 2, match.get('source_site', 'Unknown'))
+                sheet.cell(row, 3, f"₹{match['price_comparison']['source_price']:.2f}")
+                sheet.cell(row, 4, match.get('target_site', 'Unknown'))
+                sheet.cell(row, 5, f"₹{match['price_comparison']['target_price']:.2f}")
+                sheet.cell(row, 6, f"{abs(match['price_comparison']['percentage_difference']):.1f}%")
         
         # Auto-adjust column widths
-        for col in range(1, 6):
+        for col in range(1, 7):
             sheet.column_dimensions[chr(64 + col)].width = 20
     
     def _create_detailed_sheet(self, sheet, matches: List[Dict[str, Any]]):
@@ -137,8 +138,8 @@ class ExcelReporter:
             return
         
         headers = [
-            'Farm2bag Product', 'Farm2bag Price', 'Farm2bag Unit Price',
-            'Competitor Product', 'Competitor Price', 'Competitor Unit Price', 'Site',
+            'Source Product', 'Source Site', 'Source Price', 'Source Unit Price',
+            'Target Product', 'Target Site', 'Target Price', 'Target Unit Price',
             'Price Difference (₹)', 'Price Difference (%)', 'Unit Price Diff (%)',
             'Price Advantage', 'Similarity Score', 'Category'
         ]
@@ -152,32 +153,33 @@ class ExcelReporter:
         
         # Add data
         for row, match in enumerate(matches, 2):
-            farm2bag = match['farm2bag_product']
-            competitor = match['competitor_product']
+            source = match['source_product']
+            target = match['target_product']
             price_comp = match['price_comparison']
             unit_comp = match['unit_price_comparison']
             
             data = [
-                farm2bag['name'],
-                price_comp['farm2bag_price'],
-                unit_comp['farm2bag_price_per_unit'],
-                competitor['name'],
-                price_comp['competitor_price'],
-                unit_comp['competitor_price_per_unit'],
-                competitor.get('comparison_site', 'Unknown'),
+                source['name'],
+                match.get('source_site', 'Unknown'),
+                price_comp['source_price'],
+                unit_comp['source_price_per_unit'],
+                target['name'],
+                match.get('target_site', 'Unknown'),
+                price_comp['target_price'],
+                unit_comp['target_price_per_unit'],
                 price_comp['absolute_difference'],
                 price_comp['percentage_difference'],
                 unit_comp['per_unit_percentage'],
                 price_comp['price_advantage'],
                 match['similarity_score'],
-                farm2bag.get('normalized_category', 'Unknown')
+                source.get('normalized_category', 'Unknown')
             ]
             
             for col, value in enumerate(data, 1):
                 cell = sheet.cell(row=row, column=col, value=value)
                 
                 # Color coding for price advantage
-                if col in [9, 10]:  # Price difference columns
+                if col in [10, 11]:  # Price difference columns
                     if isinstance(value, (int, float)) and value < 0:
                         cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")  # Green
                     elif isinstance(value, (int, float)) and value > 0:
@@ -193,7 +195,7 @@ class ExcelReporter:
             sheet['A1'] = "All products have matches!"
             return
         
-        headers = ['Product Name', 'Category', 'Brand', 'Price', 'Reason']
+        headers = ['Product Name', 'Site', 'Category', 'Brand', 'Price', 'Reason']
         
         # Add headers
         for col, header in enumerate(headers, 1):
@@ -207,6 +209,7 @@ class ExcelReporter:
             product = item['product']
             data = [
                 product.get('name', 'Unknown'),
+                item.get('site', product.get('site', 'Unknown')),
                 product.get('normalized_category', 'Unknown'),
                 product.get('normalized_brand', 'Unknown'),
                 product.get('price', 0),
@@ -232,9 +235,9 @@ class ExcelReporter:
         
         stats_data = [
             ("Total Matches", statistics.get('total_matches', 0)),
-            ("Farm2bag Cheaper Count", statistics.get('farm2bag_cheaper_count', 0)),
-            ("Competitor Cheaper Count", statistics.get('competitor_cheaper_count', 0)),
-            ("Farm2bag Competitive Rate", f"{statistics.get('farm2bag_cheaper_percentage', 0):.1f}%"),
+            ("Source Cheaper Count", statistics.get('source_cheaper_count', 0)),
+            ("Target Cheaper Count", statistics.get('target_cheaper_count', 0)),
+            ("Source Competitive Rate", f"{statistics.get('source_cheaper_percentage', 0):.1f}%"),
             ("Average Price Difference", f"{statistics.get('average_price_difference_percentage', 0):.1f}%"),
             ("Median Price Difference", f"{statistics.get('median_price_difference', 0):.1f}%"),
             ("Maximum Savings Opportunity", f"{abs(statistics.get('max_savings_percentage', 0)):.1f}%"),
@@ -253,7 +256,7 @@ class ExcelReporter:
             sheet['A13'] = "Performance by Category"
             sheet['A13'].font = Font(size=14, bold=True)
             
-            cat_headers = ['Category', 'Avg Price Diff %', 'Product Count', 'Farm2bag Cheaper Count']
+            cat_headers = ['Category', 'Avg Price Diff %', 'Product Count', 'Source Cheaper Count']
             for col, header in enumerate(cat_headers, 1):
                 cell = sheet.cell(row=14, column=col, value=header)
                 cell.font = Font(bold=True)
@@ -261,10 +264,10 @@ class ExcelReporter:
         
         # Site analysis
         if 'by_site' in price_analysis:
-            sheet['A20'] = "Performance by Competitor Site"
+            sheet['A20'] = "Performance by Site"
             sheet['A20'].font = Font(size=14, bold=True)
             
-            site_headers = ['Site', 'Avg Price Diff %', 'Product Count', 'Farm2bag Cheaper Count']
+            site_headers = ['Site', 'Avg Price Diff %', 'Product Count', 'Source Cheaper Count']
             for col, header in enumerate(site_headers, 1):
                 cell = sheet.cell(row=21, column=col, value=header)
                 cell.font = Font(bold=True)

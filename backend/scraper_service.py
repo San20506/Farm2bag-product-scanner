@@ -1,5 +1,5 @@
 """
-Scraper service that integrates the grocery price scraper with FastAPI backend.
+Scraper service that integrates the product price scraper with FastAPI backend.
 """
 
 import asyncio
@@ -30,7 +30,7 @@ from scraper_models import (
 
 class ScraperService:
     """
-    Service class that manages grocery price scraping operations.
+    Service class that manages product price scraping operations.
     """
     
     def __init__(self, db_collection):
@@ -134,8 +134,7 @@ class ScraperService:
                 started_at=start_time,
                 completed_at=end_time,
                 execution_time=execution_time,
-                farm2bag_products=pipeline_stats.get('farm2bag_products', 0),
-                competitor_products=pipeline_stats.get('competitor_products', 0),
+                products_by_site=pipeline_stats.get('products_by_site', {}),
                 total_matches=pipeline_stats.get('total_matches', 0),
                 sites_scraped=pipeline_stats.get('sites_scraped', []),
                 categories_processed=pipeline_stats.get('categories_processed', []),
@@ -300,3 +299,121 @@ class ScraperService:
                 "error": str(e),
                 "message": "Failed to cleanup old data"
             }
+
+
+class SiteConfigManager:
+    """
+    Manages the sites.yml configuration file.
+    Provides CRUD operations for scraping source sites.
+    """
+
+    def __init__(self, config_path: str = None):
+        if config_path:
+            self.config_path = Path(config_path)
+        else:
+            self.config_path = SCRAPER_DIR / "config" / "sites.yml"
+
+    def _read_config(self) -> dict:
+        """Read and parse sites.yml."""
+        import yaml
+        with open(self.config_path, 'r') as f:
+            return yaml.safe_load(f) or {}
+
+    def _write_config(self, config: dict):
+        """Write config back to sites.yml."""
+        import yaml
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    def list_sites(self) -> list:
+        """List all configured sites."""
+        config = self._read_config()
+        sites = config.get('sites', {})
+        result = []
+        for key, site_data in sites.items():
+            result.append({
+                "key": key,
+                "name": site_data.get("name", key),
+                "base_url": site_data.get("base_url", ""),
+                "enabled": site_data.get("enabled", True),
+                "rate_limit": site_data.get("rate_limit", 2.0),
+                "use_playwright": site_data.get("use_playwright", False),
+                "selectors": site_data.get("selectors", {}),
+                "categories": site_data.get("categories", []),
+            })
+        return result
+
+    def get_site(self, key: str) -> dict | None:
+        """Get a single site config by key."""
+        config = self._read_config()
+        sites = config.get('sites', {})
+        if key not in sites:
+            return None
+        site_data = sites[key]
+        return {
+            "key": key,
+            "name": site_data.get("name", key),
+            "base_url": site_data.get("base_url", ""),
+            "enabled": site_data.get("enabled", True),
+            "rate_limit": site_data.get("rate_limit", 2.0),
+            "use_playwright": site_data.get("use_playwright", False),
+            "selectors": site_data.get("selectors", {}),
+            "categories": site_data.get("categories", []),
+        }
+
+    def add_site(self, site_data: dict) -> dict:
+        """Add a new site to the config."""
+        config = self._read_config()
+        if 'sites' not in config:
+            config['sites'] = {}
+
+        key = site_data['key']
+        if key in config['sites']:
+            raise ValueError(f"Site '{key}' already exists")
+
+        config['sites'][key] = {
+            "name": site_data['name'],
+            "base_url": site_data['base_url'],
+            "enabled": site_data.get('enabled', True),
+            "rate_limit": site_data.get('rate_limit', 2.0),
+            "use_playwright": site_data.get('use_playwright', False),
+            "selectors": site_data.get('selectors', {}),
+            "categories": site_data.get('categories', []),
+        }
+
+        self._write_config(config)
+        logger.info(f"Added site '{key}' to config")
+        return self.get_site(key)
+
+    def update_site(self, key: str, site_data: dict) -> dict | None:
+        """Update an existing site config."""
+        config = self._read_config()
+        sites = config.get('sites', {})
+        if key not in sites:
+            return None
+
+        sites[key].update({
+            "name": site_data.get('name', sites[key].get('name')),
+            "base_url": site_data.get('base_url', sites[key].get('base_url')),
+            "enabled": site_data.get('enabled', sites[key].get('enabled', True)),
+            "rate_limit": site_data.get('rate_limit', sites[key].get('rate_limit', 2.0)),
+            "use_playwright": site_data.get('use_playwright', sites[key].get('use_playwright', False)),
+            "selectors": site_data.get('selectors', sites[key].get('selectors', {})),
+            "categories": site_data.get('categories', sites[key].get('categories', [])),
+        })
+
+        self._write_config(config)
+        logger.info(f"Updated site '{key}' in config")
+        return self.get_site(key)
+
+    def delete_site(self, key: str) -> bool:
+        """Delete a site from the config."""
+        config = self._read_config()
+        sites = config.get('sites', {})
+        if key not in sites:
+            return False
+
+        del sites[key]
+        self._write_config(config)
+        logger.info(f"Deleted site '{key}' from config")
+        return True

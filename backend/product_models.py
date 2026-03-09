@@ -5,26 +5,6 @@ Pydantic models for product catalog and price comparison API endpoints.
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from enum import Enum
-
-
-class ProductCategory(str, Enum):
-    """Available product categories."""
-    VEGETABLES = "vegetables"
-    FRUITS = "fruits"
-    DAIRY = "dairy"
-    GRAINS = "grains"
-    BAKERY = "bakery"
-    GENERAL = "general"
-
-
-class ProductSite(str, Enum):
-    """Available scraping sites."""
-    FARM2BAG = "farm2bag"
-    BIGBASKET = "bigbasket"
-    JIOMART = "jiomart"
-    AMAZON_FRESH = "amazon_fresh"
-    FLIPKART_GROCERY = "flipkart_grocery"
 
 
 class ProductBase(BaseModel):
@@ -62,7 +42,7 @@ class ProductResponse(ProductBase):
 
 
 class CompetitorPrice(BaseModel):
-    """Competitor price information."""
+    """Price information from another site for comparison."""
     site: str
     price: float
     price_per_unit: Optional[float] = None
@@ -84,10 +64,10 @@ class PriceHistory(BaseModel):
 class ProductSearchResponse(BaseModel):
     """Response for product search."""
     products: List[ProductResponse]
-    total: int  # Changed from total_count to match frontend expectations
+    total: int
     page: int
     page_size: int
-    total_pages: int  # Added for frontend pagination
+    total_pages: int
     categories: List[str]
     sites: List[str]
 

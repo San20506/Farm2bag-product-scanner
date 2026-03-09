@@ -27,36 +27,32 @@ class TestPriceComparator:
         return PriceComparator(sample_config)
     
     @pytest.fixture
-    def sample_farm2bag_products(self):
-        """Sample Farm2bag products for testing."""
-        return [
-            {
-                'name': 'Organic Tomatoes',
-                'normalized_name': 'organic tomatoes',
-                'price': 45.0,
-                'price_per_unit': 45.0,
-                'normalized_unit': 'kg',
-                'normalized_size': 1.0,
-                'normalized_brand': 'farm2bag',
-                'normalized_category': 'vegetables'
-            },
-            {
-                'name': 'Fresh Bananas',
-                'normalized_name': 'fresh bananas',
-                'price': 35.0,
-                'price_per_unit': 2.92,  # 35/12
-                'normalized_unit': 'piece',
-                'normalized_size': 12.0,
-                'normalized_brand': 'farm2bag',
-                'normalized_category': 'fruits'
-            }
-        ]
-    
-    @pytest.fixture
-    def sample_competitor_products(self):
-        """Sample competitor products for testing."""
+    def sample_products_by_site(self):
+        """Sample products organized by site for testing."""
         return {
-            'bigbasket': [
+            'site_a': [
+                {
+                    'name': 'Organic Tomatoes',
+                    'normalized_name': 'organic tomatoes',
+                    'price': 45.0,
+                    'price_per_unit': 45.0,
+                    'normalized_unit': 'kg',
+                    'normalized_size': 1.0,
+                    'normalized_brand': 'site_a_brand',
+                    'normalized_category': 'vegetables'
+                },
+                {
+                    'name': 'Fresh Bananas',
+                    'normalized_name': 'fresh bananas',
+                    'price': 35.0,
+                    'price_per_unit': 2.92,
+                    'normalized_unit': 'piece',
+                    'normalized_size': 12.0,
+                    'normalized_brand': 'site_a_brand',
+                    'normalized_category': 'fruits'
+                }
+            ],
+            'site_b': [
                 {
                     'name': 'Premium Organic Tomatoes',
                     'normalized_name': 'premium organic tomatoes',
@@ -64,23 +60,21 @@ class TestPriceComparator:
                     'price_per_unit': 50.0,
                     'normalized_unit': 'kg',
                     'normalized_size': 1.0,
-                    'normalized_brand': 'bigbasket',
-                    'normalized_category': 'vegetables',
-                    'comparison_site': 'bigbasket'
+                    'normalized_brand': 'site_b_brand',
+                    'normalized_category': 'vegetables'
                 },
                 {
                     'name': 'Yellow Bananas Fresh',
                     'normalized_name': 'yellow bananas fresh',
                     'price': 40.0,
-                    'price_per_unit': 3.33,  # 40/12
+                    'price_per_unit': 3.33,
                     'normalized_unit': 'piece',
                     'normalized_size': 12.0,
-                    'normalized_brand': 'bigbasket',
-                    'normalized_category': 'fruits',
-                    'comparison_site': 'bigbasket'
+                    'normalized_brand': 'site_b_brand',
+                    'normalized_category': 'fruits'
                 }
             ],
-            'jiomart': [
+            'site_c': [
                 {
                     'name': 'Tomatoes Red Fresh',
                     'normalized_name': 'tomatoes red fresh',
@@ -88,36 +82,38 @@ class TestPriceComparator:
                     'price_per_unit': 42.0,
                     'normalized_unit': 'kg',
                     'normalized_size': 1.0,
-                    'normalized_brand': 'jiomart',
-                    'normalized_category': 'vegetables',
-                    'comparison_site': 'jiomart'
+                    'normalized_brand': 'site_c_brand',
+                    'normalized_category': 'vegetables'
                 }
             ]
         }
     
-    def test_find_matches_exact_match(self, comparator, sample_competitor_products):
+    def test_find_matches_exact_match(self, comparator):
         """Test finding matches with exact name match."""
         target_product = {
             'normalized_name': 'organic tomatoes',
-            'normalized_brand': 'farm2bag',
+            'normalized_brand': 'test_brand',
             'normalized_category': 'vegetables'
         }
         
-        all_competitors = []
-        for products in sample_competitor_products.values():
-            all_competitors.extend(products)
+        candidates = [
+            {
+                'normalized_name': 'premium organic tomatoes',
+                'normalized_brand': 'other_brand',
+                'normalized_category': 'vegetables',
+                'price': 50.0,
+                'comparison_site': 'site_b'
+            },
+            {
+                'normalized_name': 'organic tomatoes',
+                'normalized_brand': 'exact_brand',
+                'normalized_category': 'vegetables',
+                'price': 48.0,
+                'comparison_site': 'site_c'
+            }
+        ]
         
-        # Add exact match for testing
-        exact_match = {
-            'normalized_name': 'organic tomatoes',
-            'normalized_brand': 'test_brand',
-            'normalized_category': 'vegetables',
-            'price': 48.0,
-            'comparison_site': 'test_site'
-        }
-        all_competitors.append(exact_match)
-        
-        matches = comparator.find_matches(target_product, all_competitors)
+        matches = comparator.find_matches(target_product, candidates)
         
         # Should find matches
         assert len(matches) > 0
@@ -126,7 +122,7 @@ class TestPriceComparator:
         assert matches[0]['normalized_name'] == 'organic tomatoes'
         assert matches[0]['similarity_score'] > 90  # High score due to exact match bonus
     
-    def test_find_matches_no_matches(self, comparator, sample_competitor_products):
+    def test_find_matches_no_matches(self, comparator):
         """Test finding matches when no good matches exist."""
         target_product = {
             'normalized_name': 'completely different product',
@@ -134,80 +130,88 @@ class TestPriceComparator:
             'normalized_category': 'unknown'
         }
         
-        all_competitors = []
-        for products in sample_competitor_products.values():
-            all_competitors.extend(products)
+        candidates = [
+            {
+                'normalized_name': 'organic tomatoes',
+                'normalized_brand': 'test',
+                'normalized_category': 'vegetables',
+                'price': 50.0,
+                'comparison_site': 'site_b'
+            }
+        ]
         
-        matches = comparator.find_matches(target_product, all_competitors)
+        matches = comparator.find_matches(target_product, candidates)
         
         # Should not find matches above threshold
         assert len(matches) == 0
     
     def test_calculate_price_difference(self, comparator):
         """Test price difference calculation."""
-        farm2bag_product = {
+        source_product = {
             'name': 'Tomatoes',
             'price': 45.0,
             'price_per_unit': 45.0
         }
         
-        competitor_product = {
+        target_product = {
             'name': 'Premium Tomatoes',
             'price': 50.0,
             'price_per_unit': 50.0,
-            'comparison_site': 'bigbasket',
+            'comparison_site': 'site_b',
             'similarity_score': 85.0
         }
         
-        result = comparator.calculate_price_difference(farm2bag_product, competitor_product)
+        result = comparator.calculate_price_difference(source_product, target_product, 'site_a')
         
         # Check structure
-        assert 'farm2bag_product' in result
-        assert 'competitor_product' in result
+        assert 'source_product' in result
+        assert 'target_product' in result
+        assert 'source_site' in result
+        assert 'target_site' in result
         assert 'price_comparison' in result
         assert 'unit_price_comparison' in result
         
         # Check price comparison values
         price_comp = result['price_comparison']
-        assert price_comp['farm2bag_price'] == 45.0
-        assert price_comp['competitor_price'] == 50.0
-        assert price_comp['absolute_difference'] == -5.0  # Farm2bag is cheaper
+        assert price_comp['source_price'] == 45.0
+        assert price_comp['target_price'] == 50.0
+        assert price_comp['absolute_difference'] == -5.0  # Source is cheaper
         assert price_comp['percentage_difference'] == -10.0  # (45-50)/50*100
-        assert price_comp['farm2bag_cheaper'] == True
-        assert price_comp['price_advantage'] == 'Farm2bag'
+        assert price_comp['source_cheaper'] == True
+        assert price_comp['price_advantage'] == 'site_a'
         
         # Check unit price comparison
         unit_comp = result['unit_price_comparison']
         assert unit_comp['per_unit_difference'] == -5.0
-        assert unit_comp['better_unit_price'] == 'Farm2bag'
+        assert unit_comp['better_unit_price'] == 'site_a'
     
-    def test_calculate_price_difference_competitor_cheaper(self, comparator):
-        """Test price difference when competitor is cheaper."""
-        farm2bag_product = {
+    def test_calculate_price_difference_target_cheaper(self, comparator):
+        """Test price difference when target is cheaper."""
+        source_product = {
             'name': 'Tomatoes',
             'price': 55.0,
             'price_per_unit': 55.0
         }
         
-        competitor_product = {
+        target_product = {
             'name': 'Premium Tomatoes',
             'price': 50.0,
             'price_per_unit': 50.0,
-            'comparison_site': 'bigbasket',
+            'comparison_site': 'site_b',
             'similarity_score': 85.0
         }
         
-        result = comparator.calculate_price_difference(farm2bag_product, competitor_product)
+        result = comparator.calculate_price_difference(source_product, target_product, 'site_a')
         
         price_comp = result['price_comparison']
-        assert price_comp['absolute_difference'] == 5.0  # Farm2bag is more expensive
+        assert price_comp['absolute_difference'] == 5.0  # Source is more expensive
         assert price_comp['percentage_difference'] == 10.0  # (55-50)/50*100
-        assert price_comp['farm2bag_cheaper'] == False
-        assert price_comp['price_advantage'] == 'Competitor'
+        assert price_comp['source_cheaper'] == False
+        assert price_comp['price_advantage'] == 'site_b'
     
-    def test_compare_products_complete(self, comparator, sample_farm2bag_products, sample_competitor_products):
-        """Test complete product comparison."""
-        results = comparator.compare_products(sample_farm2bag_products, sample_competitor_products)
+    def test_compare_products_complete(self, comparator, sample_products_by_site):
+        """Test complete product comparison across sites."""
+        results = comparator.compare_products(sample_products_by_site)
         
         # Check structure
         assert 'matches' in results
@@ -215,13 +219,15 @@ class TestPriceComparator:
         assert 'statistics' in results
         assert 'price_analysis' in results
         
-        # Should find some matches
+        # Should find some matches (cross-site)
         assert len(results['matches']) > 0
         
         # Check match structure
         match = results['matches'][0]
-        assert 'farm2bag_product' in match
-        assert 'competitor_product' in match
+        assert 'source_product' in match
+        assert 'target_product' in match
+        assert 'source_site' in match
+        assert 'target_site' in match
         assert 'price_comparison' in match
         assert 'all_matches' in match  # Top matches
     
@@ -230,8 +236,8 @@ class TestPriceComparator:
         stats = comparator.calculate_statistics([])
         
         assert stats['total_matches'] == 0
-        assert stats['farm2bag_cheaper_count'] == 0
-        assert stats['competitor_cheaper_count'] == 0
+        assert stats['source_cheaper_count'] == 0
+        assert stats['target_cheaper_count'] == 0
         assert stats['average_price_difference_percentage'] == 0
     
     def test_calculate_statistics_with_matches(self, comparator):
@@ -239,20 +245,20 @@ class TestPriceComparator:
         matches = [
             {
                 'price_comparison': {
-                    'percentage_difference': -10.0,  # Farm2bag cheaper
-                    'farm2bag_cheaper': True
+                    'percentage_difference': -10.0,  # Source cheaper
+                    'source_cheaper': True
                 }
             },
             {
                 'price_comparison': {
-                    'percentage_difference': 5.0,   # Competitor cheaper
-                    'farm2bag_cheaper': False
+                    'percentage_difference': 5.0,   # Target cheaper
+                    'source_cheaper': False
                 }
             },
             {
                 'price_comparison': {
-                    'percentage_difference': -2.0,  # Farm2bag cheaper
-                    'farm2bag_cheaper': True
+                    'percentage_difference': -2.0,  # Source cheaper
+                    'source_cheaper': True
                 }
             }
         ]
@@ -260,9 +266,9 @@ class TestPriceComparator:
         stats = comparator.calculate_statistics(matches)
         
         assert stats['total_matches'] == 3
-        assert stats['farm2bag_cheaper_count'] == 2
-        assert stats['competitor_cheaper_count'] == 1
-        assert stats['farm2bag_cheaper_percentage'] == (2/3) * 100
+        assert stats['source_cheaper_count'] == 2
+        assert stats['target_cheaper_count'] == 1
+        assert stats['source_cheaper_percentage'] == (2/3) * 100
         assert stats['average_price_difference_percentage'] == (-10.0 + 5.0 + -2.0) / 3
         assert stats['max_savings_percentage'] == -10.0  # Most negative = biggest savings
         assert stats['min_savings_percentage'] == 5.0
@@ -278,15 +284,19 @@ class TestPriceComparator:
         """Test pricing analysis with sample data."""
         matches = [
             {
-                'farm2bag_product': {'normalized_category': 'vegetables'},
-                'competitor_product': {'comparison_site': 'bigbasket'},
-                'price_comparison': {'percentage_difference': -10.0, 'farm2bag_cheaper': True},
+                'source_product': {'normalized_category': 'vegetables'},
+                'source_site': 'site_a',
+                'target_product': {'comparison_site': 'site_b'},
+                'target_site': 'site_b',
+                'price_comparison': {'percentage_difference': -10.0, 'source_cheaper': True},
                 'similarity_score': 85.0
             },
             {
-                'farm2bag_product': {'normalized_category': 'fruits'},
-                'competitor_product': {'comparison_site': 'jiomart'},
-                'price_comparison': {'percentage_difference': 5.0, 'farm2bag_cheaper': False},
+                'source_product': {'normalized_category': 'fruits'},
+                'source_site': 'site_a',
+                'target_product': {'comparison_site': 'site_c'},
+                'target_site': 'site_c',
+                'price_comparison': {'percentage_difference': 5.0, 'source_cheaper': False},
                 'similarity_score': 80.0
             }
         ]

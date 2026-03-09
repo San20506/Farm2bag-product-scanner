@@ -1,5 +1,5 @@
 """
-FastAPI routes for the grocery price scraper API.
+FastAPI routes for the product price scraper API.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Header, Query
@@ -11,9 +11,10 @@ import os
 from scraper_models import (
     ScrapeRequest, ScrapeResponse, ScrapeResult, 
     ScheduleRequest, ScheduleResponse,
-    DatabaseStats, ApiKeyCreate, ApiKeyResponse, ApiKeyInfo
+    DatabaseStats, ApiKeyCreate, ApiKeyResponse, ApiKeyInfo,
+    SiteConfig, SiteConfigCreate
 )
-from scraper_service import ScraperService
+from scraper_service import ScraperService, SiteConfigManager
 from scheduler_service import SchedulerService
 from auth_service import AuthService
 
@@ -22,11 +23,12 @@ from auth_service import AuthService
 security = HTTPBearer(auto_error=False)
 
 # Router for scraper endpoints
-scraper_router = APIRouter(prefix="/api/scraper", tags=["Grocery Price Scraper"])
+scraper_router = APIRouter(prefix="/api/scraper", tags=["Product Price Scraper"])
 
 # Global services - will be initialized in main server
 scraper_service: Optional[ScraperService] = None
 scheduler_service: Optional[SchedulerService] = None
+site_config_manager: SiteConfigManager = SiteConfigManager()
 auth_service: Optional[AuthService] = None
 
 
@@ -113,15 +115,15 @@ async def revoke_api_key(target_key_id: str, key_id: str = Depends(get_current_k
 
 # Core scraper endpoints
 @scraper_router.post("/scrape", response_model=ScrapeResponse)
-async def start_scraping(request: ScrapeRequest, key_id: str = Depends(get_current_key_id)):
+async def start_scraping(request: ScrapeRequest):
+
     """
     Start a new scraping operation.
     
     This endpoint triggers an asynchronous scraping pipeline that:
-    1. Scrapes Farm2bag products
-    2. Scrapes competitor products from configured sites
-    3. Normalizes and compares product data
-    4. Generates reports and stores results
+    1. Scrapes products from all configured sites
+    2. Normalizes and compares product data across sites
+    3. Generates reports and stores results
     """
     if not scraper_service:
         raise HTTPException(status_code=500, detail="Scraper service not available")
@@ -280,9 +282,9 @@ async def cleanup_old_data(
 async def get_api_info():
     """Get basic API information and available endpoints."""
     return {
-        "name": "Grocery Price Scraper API",
-        "version": "1.0.0", 
-        "description": "REST API for automated grocery price scraping and comparison",
+        "name": "Product Price Scraper API",
+        "version": "2.0.0", 
+        "description": "REST API for automated product price scraping and cross-site comparison",
         "endpoints": {
             "scraping": [
                 "POST /api/scraper/scrape - Start scraping operation",
@@ -306,6 +308,42 @@ async def get_api_info():
             ]
         },
         "authentication": "API key required (Bearer token or X-API-Key header)",
-        "supported_sites": ["BigBasket", "JioMart", "Amazon Fresh", "Flipkart Grocery"],
-        "supported_categories": ["vegetables", "fruits", "dairy", "grains", "bakery"]
+        "note": "Sites and categories are fully configurable via sites.yml"
     }
+
+
+# ── Site Config Management (no auth for dev) ─────────────────────────────
+
+@scraper_router.get("/sites", response_model=List[SiteConfig])
+async def list_sites():
+    """List all configured scraping source sites."""
+    return site_config_manager.list_sites()
+
+
+@scraper_router.post("/sites", response_model=SiteConfig)
+async def add_site(site: SiteConfigCreate):
+    """Add a new scraping source site."""
+    try:
+        return site_config_manager.add_site(site.dict())
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to add site: {str(e)}")
+
+
+@scraper_router.put("/sites/{site_key}", response_model=SiteConfig)
+async def update_site(site_key: str, site: SiteConfigCreate):
+    """Update an existing scraping source site."""
+    result = site_config_manager.update_site(site_key, site.dict())
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Site '{site_key}' not found")
+    return result
+
+
+@scraper_router.delete("/sites/{site_key}")
+async def delete_site(site_key: str):
+    """Delete a scraping source site."""
+    success = site_config_manager.delete_site(site_key)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Site '{site_key}' not found")
+    return {"message": f"Site '{site_key}' deleted successfully"}

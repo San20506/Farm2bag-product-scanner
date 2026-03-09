@@ -12,7 +12,7 @@ import os
 
 class Database:
     """
-    SQLite database wrapper for the grocery price scraper.
+    SQLite database wrapper for the product price scraper.
     Stores daily snapshots of product prices for historical analysis.
     """
     
@@ -78,15 +78,17 @@ class Database:
                 CREATE TABLE IF NOT EXISTS price_comparisons (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     comparison_date DATE NOT NULL,
-                    farm2bag_product_id INTEGER,
-                    competitor_product_id INTEGER,
+                    source_product_id INTEGER,
+                    target_product_id INTEGER,
+                    source_site TEXT,
+                    target_site TEXT,
                     price_difference REAL,
                     percentage_difference REAL,
                     similarity_score REAL,
-                    farm2bag_cheaper BOOLEAN,
+                    source_cheaper BOOLEAN,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (farm2bag_product_id) REFERENCES products (id),
-                    FOREIGN KEY (competitor_product_id) REFERENCES products (id)
+                    FOREIGN KEY (source_product_id) REFERENCES products (id),
+                    FOREIGN KEY (target_product_id) REFERENCES products (id)
                 )
             """)
             
@@ -208,36 +210,41 @@ class Database:
             
             for match in matches:
                 try:
-                    # Get product IDs (this is a simplified approach)
-                    # In a real implementation, you'd want to properly match products by unique identifiers
-                    
-                    farm2bag_name = match['farm2bag_product'].get('name', '')
-                    competitor_name = match['competitor_product'].get('name', '')
+                    source_name = match['source_product'].get('name', '')
+                    target_name = match['target_product'].get('name', '')
+                    source_site = match.get('source_site', 'unknown')
+                    target_site = match.get('target_site', 'unknown')
                     
                     cursor.execute("""
                         INSERT INTO price_comparisons (
-                            comparison_date, farm2bag_product_id, competitor_product_id,
+                            comparison_date, source_product_id, target_product_id,
+                            source_site, target_site,
                             price_difference, percentage_difference, similarity_score,
-                            farm2bag_cheaper
+                            source_cheaper
                         ) VALUES (?, 
-                            (SELECT id FROM products WHERE name = ? AND site = 'farm2bag' ORDER BY created_at DESC LIMIT 1),
-                            (SELECT id FROM products WHERE name = ? ORDER BY created_at DESC LIMIT 1),
+                            (SELECT id FROM products WHERE name = ? AND site = ? ORDER BY created_at DESC LIMIT 1),
+                            (SELECT id FROM products WHERE name = ? AND site = ? ORDER BY created_at DESC LIMIT 1),
+                            ?, ?,
                             ?, ?, ?, ?
                         )
                     """, (
                         comparison_date,
-                        farm2bag_name,
-                        competitor_name,
+                        source_name,
+                        source_site,
+                        target_name,
+                        target_site,
+                        source_site,
+                        target_site,
                         match['price_comparison']['absolute_difference'],
                         match['price_comparison']['percentage_difference'],
                         match['similarity_score'],
-                        match['price_comparison']['farm2bag_cheaper']
+                        match['price_comparison']['source_cheaper']
                     ))
                     
                     stored_count += 1
                     
                 except Exception as e:
-                    logger.error(f"Failed to store comparison for {farm2bag_name}: {e}")
+                    logger.error(f"Failed to store comparison for {source_name}: {e}")
             
             conn.commit()
         

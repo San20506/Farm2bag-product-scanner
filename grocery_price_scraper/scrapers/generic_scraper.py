@@ -1,6 +1,6 @@
 """
-Farm2bag scraper - Example implementation that returns mock data.
-Later can be replaced with actual scraping logic or CSV data loading.
+Generic config-driven scraper that reads selectors and URLs from sites.yml.
+Can scrape any site defined in the configuration.
 """
 
 from typing import List, Dict, Any, Optional
@@ -9,21 +9,24 @@ from datetime import datetime
 import asyncio
 
 
-class Farm2bagScraper(ScraperBase):
+class GenericScraper(ScraperBase):
     """
-    Farm2bag scraper implementation.
+    Generic scraper implementation driven by site configuration.
+    Reads selectors, URLs, and categories from sites.yml.
     Currently returns mock data for demonstration purposes.
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        super().__init__('farm2bag', config)
+    def __init__(self, site_name: str, config: Dict[str, Any]):
+        super().__init__(site_name, config)
+        self.categories_config = config.get('categories', [])
+        self.use_playwright = config.get('use_playwright', False)
         
     async def scrape_products(self, categories: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
-        Scrape products from Farm2bag.
-        Currently returns mock data.
+        Scrape products from the configured site.
+        Currently returns mock data until real scraping logic is implemented.
         """
-        # Mock data for demonstration
+        # Mock data for demonstration — each site returns sample products
         mock_products = [
             {
                 'name': 'Organic Tomatoes',
@@ -31,9 +34,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'kg',
                 'size': '1',
                 'category': 'vegetables',
-                'brand': 'Farm2bag Fresh',
-                'url': 'https://farm2bag.com/organic-tomatoes',
-                'image_url': 'https://farm2bag.com/images/tomatoes.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Fresh',
+                'url': f'{self.base_url}/organic-tomatoes',
+                'image_url': f'{self.base_url}/images/tomatoes.jpg',
                 'availability': True
             },
             {
@@ -42,9 +45,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'dozen',
                 'size': '1',
                 'category': 'fruits',
-                'brand': 'Farm2bag Fresh',
-                'url': 'https://farm2bag.com/fresh-bananas',
-                'image_url': 'https://farm2bag.com/images/bananas.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Fresh',
+                'url': f'{self.base_url}/fresh-bananas',
+                'image_url': f'{self.base_url}/images/bananas.jpg',
                 'availability': True
             },
             {
@@ -53,9 +56,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'piece',
                 'size': '400g',
                 'category': 'bakery',
-                'brand': 'Farm2bag Bakery',
-                'url': 'https://farm2bag.com/wheat-bread',
-                'image_url': 'https://farm2bag.com/images/bread.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Bakery',
+                'url': f'{self.base_url}/wheat-bread',
+                'image_url': f'{self.base_url}/images/bread.jpg',
                 'availability': True
             },
             {
@@ -64,9 +67,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'liter',
                 'size': '1',
                 'category': 'dairy',
-                'brand': 'Farm2bag Dairy',
-                'url': 'https://farm2bag.com/fresh-milk',
-                'image_url': 'https://farm2bag.com/images/milk.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Dairy',
+                'url': f'{self.base_url}/fresh-milk',
+                'image_url': f'{self.base_url}/images/milk.jpg',
                 'availability': True
             },
             {
@@ -75,9 +78,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'kg',
                 'size': '1',
                 'category': 'grains',
-                'brand': 'Farm2bag Premium',
-                'url': 'https://farm2bag.com/basmati-rice',
-                'image_url': 'https://farm2bag.com/images/rice.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Premium',
+                'url': f'{self.base_url}/basmati-rice',
+                'image_url': f'{self.base_url}/images/rice.jpg',
                 'availability': True
             },
             {
@@ -86,9 +89,9 @@ class Farm2bagScraper(ScraperBase):
                 'unit': 'kg',
                 'size': '1',
                 'category': 'vegetables',
-                'brand': 'Farm2bag Fresh',
-                'url': 'https://farm2bag.com/red-onions',
-                'image_url': 'https://farm2bag.com/images/onions.jpg',
+                'brand': f'{self.site_name.replace("_", " ").title()} Fresh',
+                'url': f'{self.base_url}/red-onions',
+                'image_url': f'{self.base_url}/images/onions.jpg',
                 'availability': True
             }
         ]
@@ -116,7 +119,7 @@ class Farm2bagScraper(ScraperBase):
         
         # Mock detailed product data
         return {
-            'description': 'High quality product from Farm2bag',
+            'description': f'High quality product from {self.site_name}',
             'ingredients': ['Natural ingredients'],
             'nutritional_info': {'calories': '100 per serving'},
             'reviews_count': 25,

@@ -28,14 +28,12 @@ class PriceComparator:
         self.weight_category = config.get('weight_category', 0.1)
         self.exact_match_bonus = config.get('exact_match_bonus', 10)
     
-    def compare_products(self, farm2bag_products: List[Dict[str, Any]], 
-                        competitor_products: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    def compare_products(self, products_by_site: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
         """
-        Compare Farm2bag products with competitor products.
+        Compare products across all sites using cross-site pairing.
         
         Args:
-            farm2bag_products: List of Farm2bag products (normalized)
-            competitor_products: Dict of {site_name: [products]} from competitors
+            products_by_site: Dict of {site_name: [products]} for all sites
             
         Returns:
             Dictionary containing comparison results
@@ -47,27 +45,48 @@ class PriceComparator:
             'price_analysis': {}
         }
         
-        all_competitor_products = []
-        for site, products in competitor_products.items():
-            for product in products:
-                product['comparison_site'] = site
-                all_competitor_products.append(product)
+        site_names = list(products_by_site.keys())
         
-        logger.info(f"Comparing {len(farm2bag_products)} Farm2bag products with {len(all_competitor_products)} competitor products")
+        if len(site_names) < 2:
+            logger.warning("Need at least 2 sites to compare prices")
+            results['statistics'] = self._empty_statistics()
+            return results
         
-        for farm2bag_product in farm2bag_products:
-            matches = self.find_matches(farm2bag_product, all_competitor_products)
+        # Cross-site comparisons: compare each site against every other site
+        total_source = 0
+        for i, source_site in enumerate(site_names):
+            source_products = products_by_site[source_site]
             
-            if matches:
-                best_match = matches[0]  # Highest similarity score
-                comparison_result = self.calculate_price_difference(farm2bag_product, best_match)
-                comparison_result['all_matches'] = matches[:3]  # Top 3 matches
-                results['matches'].append(comparison_result)
-            else:
-                results['no_matches'].append({
-                    'product': farm2bag_product,
-                    'reason': 'No similar products found'
-                })
+            # Build candidate pool from all other sites
+            candidate_products = []
+            for j, other_site in enumerate(site_names):
+                if i == j:
+                    continue
+                for product in products_by_site[other_site]:
+                    product_copy = product.copy()
+                    product_copy['comparison_site'] = other_site
+                    candidate_products.append(product_copy)
+            
+            total_source += len(source_products)
+            
+            for source_product in source_products:
+                matches = self.find_matches(source_product, candidate_products)
+                
+                if matches:
+                    best_match = matches[0]  # Highest similarity score
+                    comparison_result = self.calculate_price_difference(
+                        source_product, best_match, source_site
+                    )
+                    comparison_result['all_matches'] = matches[:3]  # Top 3 matches
+                    results['matches'].append(comparison_result)
+                else:
+                    results['no_matches'].append({
+                        'product': source_product,
+                        'site': source_site,
+                        'reason': 'No similar products found on other sites'
+                    })
+        
+        logger.info(f"Compared {total_source} products across {len(site_names)} sites")
         
         # Calculate statistics
         results['statistics'] = self.calculate_statistics(results['matches'])
@@ -129,50 +148,67 @@ class PriceComparator:
         
         return matches
     
-    def calculate_price_difference(self, farm2bag_product: Dict[str, Any], 
-                                 competitor_product: Dict[str, Any]) -> Dict[str, Any]:
+    def calculate_price_difference(self, source_product: Dict[str, Any], 
+                                 target_product: Dict[str, Any],
+                                 source_site: str = "unknown") -> Dict[str, Any]:
         """
-        Calculate price differences between Farm2bag and competitor product.
+        Calculate price differences between two products from different sites.
         
         Args:
-            farm2bag_product: Farm2bag product data
-            competitor_product: Competitor product data
+            source_product: Source product data
+            target_product: Target product data (from another site)
+            source_site: Name of the source site
             
         Returns:
             Dictionary with comparison results
         """
-        farm2bag_price = farm2bag_product.get('price', 0.0)
-        competitor_price = competitor_product.get('price', 0.0)
+        source_price = source_product.get('price', 0.0)
+        target_price = target_product.get('price', 0.0)
         
-        farm2bag_price_per_unit = farm2bag_product.get('price_per_unit', 0.0)
-        competitor_price_per_unit = competitor_product.get('price_per_unit', 0.0)
+        source_price_per_unit = source_product.get('price_per_unit', 0.0)
+        target_price_per_unit = target_product.get('price_per_unit', 0.0)
+        
+        target_site = target_product.get('comparison_site', 'unknown')
         
         # Calculate differences
-        absolute_diff = farm2bag_price - competitor_price
-        percentage_diff = (absolute_diff / competitor_price * 100) if competitor_price > 0 else 0
+        absolute_diff = source_price - target_price
+        percentage_diff = (absolute_diff / target_price * 100) if target_price > 0 else 0
         
-        per_unit_diff = farm2bag_price_per_unit - competitor_price_per_unit
-        per_unit_percentage = (per_unit_diff / competitor_price_per_unit * 100) if competitor_price_per_unit > 0 else 0
+        per_unit_diff = source_price_per_unit - target_price_per_unit
+        per_unit_percentage = (per_unit_diff / target_price_per_unit * 100) if target_price_per_unit > 0 else 0
         
         return {
-            'farm2bag_product': farm2bag_product,
-            'competitor_product': competitor_product,
+            'source_product': source_product,
+            'source_site': source_site,
+            'target_product': target_product,
+            'target_site': target_site,
             'price_comparison': {
-                'farm2bag_price': farm2bag_price,
-                'competitor_price': competitor_price,
+                'source_price': source_price,
+                'target_price': target_price,
                 'absolute_difference': absolute_diff,
                 'percentage_difference': percentage_diff,
-                'farm2bag_cheaper': absolute_diff < 0,
-                'price_advantage': 'Farm2bag' if absolute_diff < 0 else 'Competitor'
+                'source_cheaper': absolute_diff < 0,
+                'price_advantage': source_site if absolute_diff < 0 else target_site
             },
             'unit_price_comparison': {
-                'farm2bag_price_per_unit': farm2bag_price_per_unit,
-                'competitor_price_per_unit': competitor_price_per_unit,
+                'source_price_per_unit': source_price_per_unit,
+                'target_price_per_unit': target_price_per_unit,
                 'per_unit_difference': per_unit_diff,
                 'per_unit_percentage': per_unit_percentage,
-                'better_unit_price': 'Farm2bag' if per_unit_diff < 0 else 'Competitor'
+                'better_unit_price': source_site if per_unit_diff < 0 else target_site
             },
-            'similarity_score': competitor_product.get('similarity_score', 0)
+            'similarity_score': target_product.get('similarity_score', 0)
+        }
+    
+    def _empty_statistics(self) -> Dict[str, Any]:
+        """Return empty statistics dict."""
+        return {
+            'total_matches': 0,
+            'source_cheaper_count': 0,
+            'target_cheaper_count': 0,
+            'average_price_difference_percentage': 0,
+            'max_savings_percentage': 0,
+            'min_savings_percentage': 0
         }
     
     def calculate_statistics(self, matches: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -186,25 +222,18 @@ class PriceComparator:
             Statistics dictionary
         """
         if not matches:
-            return {
-                'total_matches': 0,
-                'farm2bag_cheaper_count': 0,
-                'competitor_cheaper_count': 0,
-                'average_price_difference_percentage': 0,
-                'max_savings_percentage': 0,
-                'min_savings_percentage': 0
-            }
+            return self._empty_statistics()
         
         price_differences = [match['price_comparison']['percentage_difference'] for match in matches]
-        farm2bag_cheaper = [match for match in matches if match['price_comparison']['farm2bag_cheaper']]
+        source_cheaper = [match for match in matches if match['price_comparison']['source_cheaper']]
         
         return {
             'total_matches': len(matches),
-            'farm2bag_cheaper_count': len(farm2bag_cheaper),
-            'competitor_cheaper_count': len(matches) - len(farm2bag_cheaper),
-            'farm2bag_cheaper_percentage': (len(farm2bag_cheaper) / len(matches)) * 100,
+            'source_cheaper_count': len(source_cheaper),
+            'target_cheaper_count': len(matches) - len(source_cheaper),
+            'source_cheaper_percentage': (len(source_cheaper) / len(matches)) * 100,
             'average_price_difference_percentage': sum(price_differences) / len(price_differences),
-            'max_savings_percentage': min(price_differences) if price_differences else 0,  # Most negative = biggest savings
+            'max_savings_percentage': min(price_differences) if price_differences else 0,
             'min_savings_percentage': max(price_differences) if price_differences else 0,
             'median_price_difference': sorted(price_differences)[len(price_differences) // 2]
         }
@@ -226,10 +255,11 @@ class PriceComparator:
         data = []
         for match in matches:
             data.append({
-                'category': match['farm2bag_product'].get('normalized_category', 'unknown'),
-                'site': match['competitor_product'].get('comparison_site', 'unknown'),
+                'source_site': match.get('source_site', 'unknown'),
+                'target_site': match.get('target_site', 'unknown'),
+                'category': match['source_product'].get('normalized_category', 'unknown'),
                 'percentage_diff': match['price_comparison']['percentage_difference'],
-                'farm2bag_cheaper': match['price_comparison']['farm2bag_cheaper'],
+                'source_cheaper': match['price_comparison']['source_cheaper'],
                 'similarity_score': match['similarity_score']
             })
         
@@ -238,13 +268,13 @@ class PriceComparator:
         # Analysis by category
         category_analysis = df.groupby('category').agg({
             'percentage_diff': ['mean', 'count'],
-            'farm2bag_cheaper': 'sum'
+            'source_cheaper': 'sum'
         }).round(2)
         
-        # Analysis by site
-        site_analysis = df.groupby('site').agg({
+        # Analysis by target site
+        site_analysis = df.groupby('target_site').agg({
             'percentage_diff': ['mean', 'count'],
-            'farm2bag_cheaper': 'sum'
+            'source_cheaper': 'sum'
         }).round(2)
         
         return {
@@ -252,7 +282,7 @@ class PriceComparator:
             'by_site': site_analysis.to_dict(),
             'overall_competitiveness': {
                 'avg_price_difference': df['percentage_diff'].mean(),
-                'competitive_categories': df.groupby('category')['farm2bag_cheaper'].sum().to_dict(),
-                'most_competitive_site': df.groupby('site')['percentage_diff'].mean().idxmin() if len(df) > 0 else None
+                'competitive_categories': df.groupby('category')['source_cheaper'].sum().to_dict(),
+                'cheapest_site': df.groupby('target_site')['percentage_diff'].mean().idxmin() if len(df) > 0 else None
             }
         }

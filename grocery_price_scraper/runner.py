@@ -14,7 +14,7 @@ import os
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
-from scrapers import Farm2bagScraper
+from scrapers import GenericScraper
 from normalizer import ProductNormalizer
 from comparator import PriceComparator
 from reporter import ExcelReporter
@@ -25,6 +25,7 @@ class PriceComparisonRunner:
     """
     Main orchestrator for the price comparison pipeline.
     Coordinates scraping, normalization, comparison, and reporting.
+    All configured sites are treated equally — no "primary" site distinction.
     """
     
     def __init__(self, config_dir: str = "config"):
@@ -80,36 +81,28 @@ class PriceComparisonRunner:
         start_time = datetime.now()
         
         try:
-            # Step 1: Scrape Farm2bag data
-            logger.info("Step 1: Scraping Farm2bag products...")
-            farm2bag_products = await self._scrape_farm2bag(categories)
+            # Step 1: Scrape products from all configured sites
+            logger.info("Step 1: Scraping products from configured sites...")
+            products_by_site = await self._scrape_sites(categories, sites)
             
-            # Step 2: Scrape competitor data
-            logger.info("Step 2: Scraping competitor products...")
-            competitor_products = await self._scrape_competitors(categories, sites)
+            # Step 2: Normalize all product data
+            logger.info("Step 2: Normalizing product data...")
+            normalized_by_site = {}
+            for site, products in products_by_site.items():
+                normalized_by_site[site] = self.normalizer.normalize_batch(products)
             
-            # Step 3: Normalize all product data
-            logger.info("Step 3: Normalizing product data...")
-            normalized_farm2bag = self.normalizer.normalize_batch(farm2bag_products)
+            # Step 3: Compare prices across sites
+            logger.info("Step 3: Comparing prices across sites...")
+            comparison_results = self.comparator.compare_products(normalized_by_site)
             
-            normalized_competitors = {}
-            for site, products in competitor_products.items():
-                normalized_competitors[site] = self.normalizer.normalize_batch(products)
-            
-            # Step 4: Compare prices
-            logger.info("Step 4: Comparing prices...")
-            comparison_results = self.comparator.compare_products(
-                normalized_farm2bag, normalized_competitors
-            )
-            
-            # Step 5: Store data in database
+            # Step 4: Store data in database
             if store_data:
-                logger.info("Step 5: Storing data in database...")
-                await self._store_data(normalized_farm2bag, normalized_competitors, comparison_results)
+                logger.info("Step 4: Storing data in database...")
+                await self._store_data(normalized_by_site, comparison_results)
             
-            # Step 6: Generate Excel report
+            # Step 5: Generate Excel report
             if generate_report:
-                logger.info("Step 6: Generating Excel report...")
+                logger.info("Step 5: Generating Excel report...")
                 report_path = self.reporter.generate_report(comparison_results)
                 comparison_results['report_path'] = report_path
             
@@ -117,12 +110,17 @@ class PriceComparisonRunner:
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
             
+            total_products = sum(len(products) for products in normalized_by_site.values())
+            products_count_by_site = {
+                site: len(products) for site, products in normalized_by_site.items()
+            }
+            
             pipeline_stats = {
                 'execution_time': duration,
-                'farm2bag_products': len(normalized_farm2bag),
-                'competitor_products': sum(len(products) for products in normalized_competitors.values()),
+                'total_products': total_products,
+                'products_by_site': products_count_by_site,
                 'total_matches': len(comparison_results.get('matches', [])),
-                'sites_scraped': list(normalized_competitors.keys()),
+                'sites_scraped': list(normalized_by_site.keys()),
                 'categories_processed': categories or ['all'],
                 'timestamp': end_time
             }
@@ -138,25 +136,18 @@ class PriceComparisonRunner:
             logger.error(f"Pipeline execution failed: {e}")
             raise
     
-    async def _scrape_farm2bag(self, categories: List[str] = None) -> List[Dict[str, Any]]:
-        """Scrape Farm2bag products (currently returns mock data)."""
-        farm2bag_config = {
-            'base_url': 'https://farm2bag.com',
-            'rate_limit': 0.5
-        }
-        
-        scraper = Farm2bagScraper(farm2bag_config)
-        products = await scraper.scrape_products(categories)
-        
-        logger.info(f"Scraped {len(products)} Farm2bag products")
-        return products
-    
-    async def _scrape_competitors(self, 
-                                 categories: List[str] = None,
-                                 sites: List[str] = None) -> Dict[str, List[Dict[str, Any]]]:
+    async def _scrape_sites(self, 
+                            categories: List[str] = None,
+                            sites: List[str] = None) -> Dict[str, List[Dict[str, Any]]]:
         """
-        Scrape competitor products.
-        Currently returns mock data for demonstration.
+        Scrape products from all enabled sites.
+        
+        Args:
+            categories: List of categories to scrape (optional)
+            sites: List of specific sites to scrape (optional, defaults to all enabled)
+            
+        Returns:
+            Dictionary of {site_name: [products]}
         """
         # Get enabled sites from config
         enabled_sites = {}
@@ -169,74 +160,31 @@ class PriceComparisonRunner:
         
         logger.info(f"Scraping from sites: {list(enabled_sites.keys())}")
         
-        # For now, return mock competitor data
-        # TODO: Implement actual scrapers for BigBasket, JioMart, etc.
-        competitor_products = {}
+        products_by_site = {}
         
-        for site_name in enabled_sites.keys():
-            # Mock competitor products for demonstration
-            mock_products = [
-                {
-                    'name': 'Organic Tomatoes Premium',
-                    'price': '50.00',
-                    'unit': 'kg',
-                    'size': '1',
-                    'category': 'vegetables',
-                    'brand': f'{site_name.title()} Fresh',
-                    'url': f'https://{site_name}.com/tomatoes',
-                    'image_url': f'https://{site_name}.com/images/tomatoes.jpg',
-                    'availability': True,
-                    'site': site_name
-                },
-                {
-                    'name': 'Fresh Bananas',
-                    'price': '40.00',
-                    'unit': 'dozen',
-                    'size': '1',
-                    'category': 'fruits',
-                    'brand': f'{site_name.title()}',
-                    'url': f'https://{site_name}.com/bananas',
-                    'image_url': f'https://{site_name}.com/images/bananas.jpg',
-                    'availability': True,
-                    'site': site_name
-                },
-                {
-                    'name': 'Whole Wheat Bread',
-                    'price': '28.00',
-                    'unit': 'piece',
-                    'size': '400g',
-                    'category': 'bakery',
-                    'brand': f'{site_name.title()} Bakery',
-                    'url': f'https://{site_name}.com/bread',
-                    'image_url': f'https://{site_name}.com/images/bread.jpg',
-                    'availability': True,
-                    'site': site_name
-                }
-            ]
-            
-            # Add site to each product
-            for product in mock_products:
-                product['scraped_at'] = datetime.now()
-            
-            competitor_products[site_name] = mock_products
+        for site_name, site_config in enabled_sites.items():
+            try:
+                scraper = GenericScraper(site_name, site_config)
+                products = await scraper.scrape_products(categories)
+                products_by_site[site_name] = products
+                logger.info(f"Scraped {len(products)} products from {site_name}")
+            except Exception as e:
+                logger.error(f"Failed to scrape {site_name}: {e}")
+                products_by_site[site_name] = []
         
-        total_products = sum(len(products) for products in competitor_products.values())
-        logger.info(f"Scraped {total_products} competitor products from {len(competitor_products)} sites")
+        total_products = sum(len(products) for products in products_by_site.values())
+        logger.info(f"Scraped {total_products} total products from {len(products_by_site)} sites")
         
-        return competitor_products
+        return products_by_site
     
     async def _store_data(self, 
-                         farm2bag_products: List[Dict[str, Any]],
-                         competitor_products: Dict[str, List[Dict[str, Any]]],
+                         products_by_site: Dict[str, List[Dict[str, Any]]],
                          comparison_results: Dict[str, Any]):
         """Store scraped data and comparison results in database."""
         today = date.today()
         
-        # Store Farm2bag products
-        self.database.store_products(farm2bag_products, today)
-        
-        # Store competitor products
-        for site, products in competitor_products.items():
+        # Store products from all sites
+        for site, products in products_by_site.items():
             self.database.store_products(products, today)
         
         # Store comparison results
@@ -256,11 +204,11 @@ class PriceComparisonRunner:
 
 async def main():
     """Main entry point for command-line usage."""
-    parser = argparse.ArgumentParser(description="Grocery Price Comparison Tool")
+    parser = argparse.ArgumentParser(description="Product Price Comparison Tool")
     parser.add_argument('--categories', nargs='+', 
-                       help='Categories to scrape (vegetables, fruits, dairy, grains)')
+                       help='Categories to scrape (e.g., vegetables, fruits, dairy, grains)')
     parser.add_argument('--sites', nargs='+',
-                       help='Sites to scrape (bigbasket, jiomart, amazon_fresh, flipkart_grocery)')
+                       help='Sites to scrape (e.g., farm2bag, bigbasket, jiomart, amazon_fresh)')
     parser.add_argument('--no-report', action='store_true',
                        help='Skip Excel report generation')
     parser.add_argument('--no-store', action='store_true', 
@@ -312,8 +260,12 @@ async def main():
         logger.info("PIPELINE EXECUTION SUMMARY")
         logger.info("="*50)
         logger.info(f"Execution time: {stats.get('execution_time', 0):.2f} seconds")
-        logger.info(f"Farm2bag products: {stats.get('farm2bag_products', 0)}")
-        logger.info(f"Competitor products: {stats.get('competitor_products', 0)}")
+        logger.info(f"Total products scraped: {stats.get('total_products', 0)}")
+        
+        products_by_site = stats.get('products_by_site', {})
+        for site, count in products_by_site.items():
+            logger.info(f"  {site}: {count} products")
+        
         logger.info(f"Total matches found: {stats.get('total_matches', 0)}")
         logger.info(f"Sites scraped: {', '.join(stats.get('sites_scraped', []))}")
         

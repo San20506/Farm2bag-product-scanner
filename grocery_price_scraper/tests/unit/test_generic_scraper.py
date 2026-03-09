@@ -1,38 +1,42 @@
 """
-Unit tests for Farm2bagScraper.
+Unit tests for GenericScraper.
 """
 
 import pytest
 import asyncio
-from scrapers import Farm2bagScraper
+from scrapers import GenericScraper
 
 
-class TestFarm2bagScraper:
-    """Test cases for Farm2bagScraper class."""
+class TestGenericScraper:
+    """Test cases for GenericScraper class."""
     
     @pytest.fixture
     def scraper_config(self):
-        """Sample configuration for Farm2bag scraper."""
+        """Sample configuration for a generic scraper."""
         return {
-            'base_url': 'https://farm2bag.com',
+            'base_url': 'https://example.com',
             'rate_limit': 0.1,  # Fast for testing
             'selectors': {
                 'product_container': '.product',
                 'name': '.product-name',
                 'price': '.price'
-            }
+            },
+            'categories': [
+                {'vegetables': '/vegetables/'},
+                {'fruits': '/fruits/'}
+            ]
         }
     
     @pytest.fixture
     def scraper(self, scraper_config):
-        """Create Farm2bagScraper instance."""
-        return Farm2bagScraper(scraper_config)
+        """Create GenericScraper instance."""
+        return GenericScraper('test_site', scraper_config)
     
     @pytest.mark.asyncio
     async def test_scraper_initialization(self, scraper):
         """Test scraper initialization."""
-        assert scraper.site_name == 'farm2bag'
-        assert scraper.base_url == 'https://farm2bag.com'
+        assert scraper.site_name == 'test_site'
+        assert scraper.base_url == 'https://example.com'
         assert scraper.rate_limit == 0.1
     
     @pytest.mark.asyncio
@@ -49,7 +53,7 @@ class TestFarm2bagScraper:
             assert 'price' in product
             assert 'site' in product
             assert 'scraped_at' in product
-            assert product['site'] == 'farm2bag'
+            assert product['site'] == 'test_site'
             assert isinstance(product['price'], float)
     
     @pytest.mark.asyncio
@@ -78,7 +82,7 @@ class TestFarm2bagScraper:
     @pytest.mark.asyncio
     async def test_scrape_product_details(self, scraper):
         """Test scraping individual product details."""
-        details = await scraper.scrape_product_details('https://farm2bag.com/test-product')
+        details = await scraper.scrape_product_details('https://example.com/test-product')
         
         # Should return mock detailed data
         assert 'description' in details
@@ -102,7 +106,17 @@ class TestFarm2bagScraper:
             # Check data types
             assert isinstance(product['price'], float)
             assert isinstance(product['availability'], bool)
-            assert product['site'] == 'farm2bag'
+            assert product['site'] == 'test_site'
+    
+    @pytest.mark.asyncio
+    async def test_different_site_names(self):
+        """Test that scraper correctly uses injected site name."""
+        config = {'base_url': 'https://bigbasket.com', 'rate_limit': 0.1}
+        scraper = GenericScraper('bigbasket', config)
+        
+        products = await scraper.scrape_products()
+        for product in products:
+            assert product['site'] == 'bigbasket'
     
     def test_price_parsing(self, scraper):
         """Test price parsing functionality."""
@@ -121,8 +135,8 @@ class TestFarm2bagScraper:
             'unit': 'KG',
             'size': '1',
             'category': 'Vegetables',
-            'brand': '  Farm2bag  ',
-            'url': 'https://farm2bag.com/tomatoes',
+            'brand': '  TestBrand  ',
+            'url': 'https://example.com/tomatoes',
             'availability': 'true'
         }
         
@@ -132,15 +146,14 @@ class TestFarm2bagScraper:
         assert standardized['price'] == 45.50
         assert standardized['unit'] == 'kg'  # Lowercase
         assert standardized['category'] == 'Vegetables'
-        assert standardized['brand'] == 'Farm2bag'
-        assert standardized['site'] == 'farm2bag'
+        assert standardized['brand'] == 'TestBrand'
+        assert standardized['site'] == 'test_site'
         assert 'scraped_at' in standardized
     
     @pytest.mark.asyncio
     async def test_rate_limiting(self, scraper):
         """Test that rate limiting is applied."""
         # This test checks that rate limiting doesn't crash
-        # Actual timing would be hard to test reliably
         scraper.apply_rate_limit()
         # Should complete without error
         assert True

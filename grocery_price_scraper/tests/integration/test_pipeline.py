@@ -22,9 +22,16 @@ class TestPipelineIntegration:
             # Create config files in temp directory
             sites_config = """
 sites:
-  test_site:
-    name: "Test Site"
-    base_url: "https://test.com"
+  site_a:
+    name: "Test Site A"
+    base_url: "https://site-a.com"
+    enabled: true
+    rate_limit: 0.1
+    use_playwright: false
+    
+  site_b:
+    name: "Test Site B"
+    base_url: "https://site-b.com"
     enabled: true
     rate_limit: 0.1
     use_playwright: false
@@ -102,33 +109,37 @@ comparison:
         assert runner.database is not None
     
     @pytest.mark.asyncio
-    async def test_farm2bag_scraping(self, temp_config_dir):
-        """Test Farm2bag scraping (mock data)."""
+    async def test_site_scraping(self, temp_config_dir):
+        """Test scraping from configured sites."""
         runner = PriceComparisonRunner(config_dir=temp_config_dir)
         
-        products = await runner._scrape_farm2bag(['vegetables', 'fruits'])
+        products_by_site = await runner._scrape_sites(
+            categories=['vegetables', 'fruits'],
+            sites=['site_a']
+        )
         
-        assert len(products) > 0
+        assert 'site_a' in products_by_site
+        assert len(products_by_site['site_a']) > 0
         
         # Check product structure
-        for product in products:
+        for product in products_by_site['site_a']:
             assert 'name' in product
             assert 'price' in product
             assert 'site' in product
-            assert product['site'] == 'farm2bag'
+            assert product['site'] == 'site_a'
     
     @pytest.mark.asyncio
-    async def test_competitor_scraping(self, temp_config_dir):
-        """Test competitor scraping (mock data)."""
+    async def test_multi_site_scraping(self, temp_config_dir):
+        """Test scraping from multiple sites."""
         runner = PriceComparisonRunner(config_dir=temp_config_dir)
         
-        competitor_products = await runner._scrape_competitors(
-            categories=['vegetables'],
-            sites=['test_site']
+        products_by_site = await runner._scrape_sites(
+            categories=['vegetables']
         )
         
-        # Should return mock data since actual scraping is not implemented
-        assert isinstance(competitor_products, dict)
+        # Should scrape from both enabled sites
+        assert 'site_a' in products_by_site
+        assert 'site_b' in products_by_site
     
     @pytest.mark.asyncio
     async def test_full_pipeline_execution(self, temp_config_dir):
@@ -152,12 +163,13 @@ comparison:
         # Check pipeline stats
         stats = results['pipeline_stats']
         assert 'execution_time' in stats
-        assert 'farm2bag_products' in stats
-        assert 'competitor_products' in stats
+        assert 'total_products' in stats
+        assert 'products_by_site' in stats
         assert 'timestamp' in stats
         
-        # Should have some data
-        assert stats['farm2bag_products'] > 0
+        # Should have data from both sites
+        assert stats['total_products'] > 0
+        assert len(stats['products_by_site']) >= 1
     
     @pytest.mark.asyncio
     async def test_database_integration(self, temp_db):
@@ -165,7 +177,7 @@ comparison:
         # Store sample products
         products = [
             {
-                'site': 'farm2bag',
+                'site': 'site_a',
                 'name': 'Test Tomatoes',
                 'normalized_name': 'test tomatoes',
                 'price': 45.0,
@@ -176,8 +188,8 @@ comparison:
                 'price_per_unit': 45.0,
                 'category': 'vegetables',
                 'normalized_category': 'vegetables',
-                'brand': 'farm2bag',
-                'normalized_brand': 'farm2bag',
+                'brand': 'test_brand',
+                'normalized_brand': 'test_brand',
                 'url': 'https://test.com/tomatoes',
                 'image_url': '',
                 'availability': True
@@ -197,7 +209,7 @@ comparison:
         # Check statistics
         stats = temp_db.get_statistics()
         assert stats['total_products'] == 1
-        assert 'farm2bag' in stats['products_by_site']
+        assert 'site_a' in stats['products_by_site']
     
     @pytest.mark.asyncio
     async def test_report_generation(self, temp_config_dir):
@@ -208,28 +220,30 @@ comparison:
         comparison_results = {
             'matches': [
                 {
-                    'farm2bag_product': {
+                    'source_product': {
                         'name': 'Test Product',
                         'normalized_category': 'vegetables'
                     },
-                    'competitor_product': {
+                    'source_site': 'site_a',
+                    'target_product': {
                         'name': 'Competitor Product',
-                        'comparison_site': 'test_site'
+                        'comparison_site': 'site_b'
                     },
+                    'target_site': 'site_b',
                     'price_comparison': {
-                        'farm2bag_price': 45.0,
-                        'competitor_price': 50.0,
+                        'source_price': 45.0,
+                        'target_price': 50.0,
                         'absolute_difference': -5.0,
                         'percentage_difference': -10.0,
-                        'farm2bag_cheaper': True,
-                        'price_advantage': 'Farm2bag'
+                        'source_cheaper': True,
+                        'price_advantage': 'site_a'
                     },
                     'unit_price_comparison': {
-                        'farm2bag_price_per_unit': 45.0,
-                        'competitor_price_per_unit': 50.0,
+                        'source_price_per_unit': 45.0,
+                        'target_price_per_unit': 50.0,
                         'per_unit_difference': -5.0,
                         'per_unit_percentage': -10.0,
-                        'better_unit_price': 'Farm2bag'
+                        'better_unit_price': 'site_a'
                     },
                     'similarity_score': 85.0
                 }
@@ -237,9 +251,9 @@ comparison:
             'no_matches': [],
             'statistics': {
                 'total_matches': 1,
-                'farm2bag_cheaper_count': 1,
-                'competitor_cheaper_count': 0,
-                'farm2bag_cheaper_percentage': 100.0,
+                'source_cheaper_count': 1,
+                'target_cheaper_count': 0,
+                'source_cheaper_percentage': 100.0,
                 'average_price_difference_percentage': -10.0
             },
             'price_analysis': {
@@ -283,7 +297,8 @@ comparison:
         
         # Check sites config loaded
         assert 'sites' in runner.sites_config
-        assert 'test_site' in runner.sites_config['sites']
+        assert 'site_a' in runner.sites_config['sites']
+        assert 'site_b' in runner.sites_config['sites']
         
         # Check rules config loaded
         assert 'unit_mappings' in runner.rules_config
