@@ -26,6 +26,10 @@ class ScheduleInterval(str, Enum):
 
 class ScrapeRequest(BaseModel):
     """Request model for scraping operations."""
+    product_query: Optional[str] = Field(
+        None,
+        description="Single product name/search query to scrape across enabled sites"
+    )
     categories: Optional[List[str]] = Field(None, description="Categories to scrape (e.g., vegetables, fruits, dairy, grains, electronics)")
     sites: Optional[List[str]] = Field(None, description="Sites to scrape (as configured in sites.yml)")
     generate_report: bool = Field(True, description="Whether to generate Excel report")

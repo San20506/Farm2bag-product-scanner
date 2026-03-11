@@ -60,7 +60,8 @@ class PriceComparisonRunner:
             logger.error(f"Error parsing YAML config {filename}: {e}")
             return {}
     
-    async def run_full_pipeline(self, 
+    async def run_full_pipeline(self,
+                               product_query: str = None,
                                categories: List[str] = None,
                                sites: List[str] = None,
                                generate_report: bool = True,
@@ -83,7 +84,7 @@ class PriceComparisonRunner:
         try:
             # Step 1: Scrape products from all configured sites
             logger.info("Step 1: Scraping products from configured sites...")
-            products_by_site = await self._scrape_sites(categories, sites)
+            products_by_site = await self._scrape_sites(categories, sites, product_query)
             
             # Step 2: Normalize all product data
             logger.info("Step 2: Normalizing product data...")
@@ -124,6 +125,27 @@ class PriceComparisonRunner:
                 'categories_processed': categories or ['all'],
                 'timestamp': end_time
             }
+
+            if product_query:
+                pipeline_stats['categories_processed'] = []
+                query_products_flat = []
+                for site_name, site_products in normalized_by_site.items():
+                    for product in site_products:
+                        query_products_flat.append({
+                            'site': site_name,
+                            'name': product.get('name'),
+                            'price': product.get('price'),
+                            'unit': product.get('unit'),
+                            'size': product.get('size'),
+                            'brand': product.get('brand'),
+                            'url': product.get('url'),
+                            'image_url': product.get('image_url'),
+                            'availability': product.get('availability', True),
+                            'category': product.get('category', 'general')
+                        })
+
+                pipeline_stats['product_query'] = product_query
+                pipeline_stats['query_products_flat'] = query_products_flat
             
             comparison_results['pipeline_stats'] = pipeline_stats
             
@@ -136,9 +158,10 @@ class PriceComparisonRunner:
             logger.error(f"Pipeline execution failed: {e}")
             raise
     
-    async def _scrape_sites(self, 
+    async def _scrape_sites(self,
                             categories: List[str] = None,
-                            sites: List[str] = None) -> Dict[str, List[Dict[str, Any]]]:
+                            sites: List[str] = None,
+                            product_query: str = None) -> Dict[str, List[Dict[str, Any]]]:
         """
         Scrape products from all enabled sites.
         
@@ -165,7 +188,7 @@ class PriceComparisonRunner:
         for site_name, site_config in enabled_sites.items():
             try:
                 scraper = GenericScraper(site_name, site_config)
-                products = await scraper.scrape_products(categories)
+                products = await scraper.scrape_products(categories, product_query=product_query)
                 products_by_site[site_name] = products
                 logger.info(f"Scraped {len(products)} products from {site_name}")
             except Exception as e:
@@ -205,6 +228,8 @@ class PriceComparisonRunner:
 async def main():
     """Main entry point for command-line usage."""
     parser = argparse.ArgumentParser(description="Product Price Comparison Tool")
+    parser.add_argument('--product', type=str,
+                       help='Single product query to scrape across all enabled sites')
     parser.add_argument('--categories', nargs='+', 
                        help='Categories to scrape (e.g., vegetables, fruits, dairy, grains)')
     parser.add_argument('--sites', nargs='+',
@@ -248,6 +273,7 @@ async def main():
         
         # Run the pipeline
         results = await runner.run_full_pipeline(
+            product_query=args.product,
             categories=args.categories,
             sites=args.sites,
             generate_report=not args.no_report,

@@ -32,12 +32,17 @@ class ScraperBase(ABC):
         self.rate_limit = config.get('rate_limit', 1.0)  # seconds between requests
         
     @abstractmethod
-    async def scrape_products(self, categories: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    async def scrape_products(
+        self,
+        categories: Optional[List[str]] = None,
+        product_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Scrape products from the website.
         
         Args:
             categories: List of product categories to scrape (optional)
+            product_query: Single product query to search across the site (optional)
             
         Returns:
             List of product dictionaries with standardized structure:

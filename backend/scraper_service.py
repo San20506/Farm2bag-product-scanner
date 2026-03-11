@@ -116,6 +116,7 @@ class ScraperService:
             
             # Run the pipeline
             results = await self.runner.run_full_pipeline(
+                product_query=request.product_query,
                 categories=request.categories,
                 sites=request.sites,
                 generate_report=request.generate_report,
@@ -141,16 +142,19 @@ class ScraperService:
                 report_path=results.get('report_path'),
                 pipeline_stats=pipeline_stats
             )
-            
-            # Store result in database
-            await self.db.insert_one(result.dict())
-            
+
             # Update active task
             self.active_tasks[task_id].update({
                 "status": ScrapingStatus.COMPLETED,
                 "completed_at": end_time,
                 "result": result.dict()
             })
+
+            # Store result in database (best effort)
+            try:
+                await self.db.insert_one(result.dict())
+            except Exception as db_error:
+                logger.warning(f"Failed to persist completed task {task_id}: {db_error}")
             
             logger.info(f"Scraping pipeline completed successfully for task {task_id}")
             
@@ -168,16 +172,20 @@ class ScraperService:
                 completed_at=end_time,
                 error_message=error_message
             )
-            
-            # Store error result in database
-            await self.db.insert_one(result.dict())
-            
+
             # Update active task
             self.active_tasks[task_id].update({
                 "status": ScrapingStatus.FAILED,
                 "completed_at": end_time,
-                "error_message": error_message
+                "error_message": error_message,
+                "result": result.dict()
             })
+
+            # Store error result in database (best effort)
+            try:
+                await self.db.insert_one(result.dict())
+            except Exception as db_error:
+                logger.warning(f"Failed to persist failed task {task_id}: {db_error}")
     
     async def get_task_status(self, task_id: str) -> Optional[ScrapeResult]:
         """

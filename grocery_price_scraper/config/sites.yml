@@ -2,7 +2,7 @@ sites:
   farm2bag:
     name: Farm2Bag
     base_url: https://www.farm2bag.com
-    enabled: true
+    enabled: false
     rate_limit: 1.0
     use_playwright: false
     categories:
@@ -21,7 +21,7 @@ sites:
   bigbasket:
     name: BigBasket
     base_url: https://www.bigbasket.com
-    enabled: true
+    enabled: false
     rate_limit: 2.0
     use_playwright: true
     categories:
@@ -45,7 +45,7 @@ sites:
   jiomart:
     name: JioMart
     base_url: https://www.jiomart.com
-    enabled: true
+    enabled: false
     rate_limit: 1.5
     use_playwright: true
     categories:
@@ -62,11 +62,12 @@ sites:
       image: .plp-card-image img
       availability: .add-to-cart-btn
   amazon_fresh:
-    name: Amazon Fresh
+    name: Amazon India
     base_url: https://www.amazon.in
     enabled: true
     rate_limit: 3.0
     use_playwright: true
+    search_url_template: https://www.amazon.in/s?k={query}
     categories:
     - vegetables: /s?k=fresh+vegetables
     - fruits: /s?k=fresh+fruits
@@ -84,19 +85,20 @@ sites:
       User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
       Accept-Language: en-US,en;q=0.9
   flipkart_grocery:
-    name: Flipkart Grocery
+    name: Flipkart
     base_url: https://www.flipkart.com
     enabled: true
     rate_limit: 2.0
     use_playwright: true
+    search_url_template: https://www.flipkart.com/search?q={query}
     categories:
     - vegetables: /grocery-supermart-store
     - fruits: /grocery-supermart-store
     - dairy: /grocery-supermart-store
     - grains: /grocery-supermart-store
     selectors:
-      product_container: ._1AtVbE
-      name: ._4rR01T
+      product_container: div[data-id]
+      name: .KzDlHZ
       price: ._30jeq3
       unit: ._3Djpdu
       brand: ._2WkVRV
@@ -105,7 +107,7 @@ sites:
   test_store:
     name: Test Store
     base_url: https://www.example.com
-    enabled: true
+    enabled: false
     rate_limit: 2.0
     use_playwright: false
     selectors:
@@ -115,16 +117,43 @@ sites:
       unit: .qty
     categories: []
   amazon:
-    name: Amazon
+    name: Amazon US
     base_url: https://www.amazon.com/
     enabled: true
     rate_limit: 3.0
     use_playwright: true
+    search_url_template: https://www.amazon.com/s?k={query}
     selectors:
-      product_container: .product
-      name: .product-name
-      price: .price
-      unit: .unit
+      product_container: '[data-component-type=''s-search-result'']'
+      name: h2 a span
+      price: .a-price-whole
+      unit: piece
+    categories: []
+  ebay:
+    name: eBay
+    base_url: https://www.ebay.com
+    enabled: true
+    rate_limit: 2.0
+    use_playwright: false
+    search_url_template: https://www.ebay.com/sch/i.html?_nkw={query}
+    selectors:
+      product_container: .s-item
+      name: .s-item__title
+      price: .s-item__price
+      image: .s-item__image-img
+    categories: []
+  meesho:
+    name: Meesho
+    base_url: https://www.meesho.com
+    enabled: true
+    rate_limit: 2.0
+    use_playwright: true
+    search_url_template: https://www.meesho.com/search?q={query}
+    selectors:
+      product_container: a[href*='/p/']
+      name: p, h3
+      price: h5, span[class*='price'], span[class*='Price']
+      image: img
     categories: []
 global:
   max_concurrent_requests: 3

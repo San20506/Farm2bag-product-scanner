@@ -12,7 +12,7 @@ def get_python_path():
     return sys.executable
 
 def main():
-    print("🚀 Starting PriceTrackerPro Project...\n")
+    print("🚀 Starting Farm2bag Product Scanner...\n")
     
     # Try starting the MongoDB container just in case it stopped
     print("📦 Checking MongoDB docker container...")
@@ -21,22 +21,30 @@ def main():
     python_exe = get_python_path()
     
     print("\n⚙️  Starting backend API server (Port 8001)...")
+    # Setting environment variables for local development
+    env = os.environ.copy()
+    env["MONGO_URL"] = "mongodb://localhost:27017"
+    env["DB_NAME"] = "farm2bag_local"
+    
     backend_process = subprocess.Popen(
         [python_exe, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"],
-        cwd=os.path.join(os.getcwd(), "backend")
+        cwd=os.path.join(os.getcwd(), "backend"),
+        env=env
     )
     
-    time.sleep(1) # Give backend a second to print its startup logs
+    time.sleep(2) # Give backend a second to print its startup logs
     
-    print("\n🎨 Starting frontend UI server (Port 3001)...")
+    print("\n🎨 Starting frontend UI server (Port 3000)...")
+    # Using npm start for the React frontend instead of http.server
     frontend_process = subprocess.Popen(
-        [python_exe, "-m", "http.server", "3001"],
-        cwd=os.path.join(os.getcwd(), "website")
+        ["npm", "start"],
+        cwd=os.path.join(os.getcwd(), "frontend"),
+        shell=True # Required for npm on Windows
     )
     
     print("\n✅ All services started! Press Ctrl+C to stop.")
-    print("🔗 Frontend Dashboard: http://localhost:3001")
-    print("🔗 Backend API:       http://localhost:8001/docs\n")
+    print("🔗 Frontend Dashboard: http://localhost:3000")
+    print("🔗 Backend API:       http://localhost:8001/api\n")
     
     # Handle graceful shutdown
     def cleanup(signum, frame):

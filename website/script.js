@@ -157,18 +157,16 @@ function renderCompareProductsPage() {
         <div class="url-drop-zone">
             <div class="drop-header">
                 <span style="font-size:28px;">🔗</span>
-                <h3>Drop Product Links</h3>
-                <p>Paste one URL per line — we'll scrape product details automatically</p>
+                <h3>Search One Product Across All Sites</h3>
+                <p>Enter one product name and we will scrape it across all enabled websites in system config</p>
             </div>
-            <textarea id="urlInput" class="url-textarea" rows="5"
-                placeholder="https://www.bigbasket.com/pd/100001/...
-https://www.amazon.in/dp/B0...
-https://www.flipkart.com/..."></textarea>
+            <input id="productInput" class="url-textarea" style="min-height: 56px;" type="text"
+                placeholder="e.g. organic tomatoes, basmati rice 1kg, amul milk 1L" />
             <div class="drop-actions">
-                <span class="url-count" id="urlCount">0 URLs</span>
+                <span class="url-count" id="productStatus">Waiting for product input</span>
                 <button class="btn btn-primary" id="scrapeUrlsBtn" disabled>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Scrape & Compare
+                    Scrape Across Sites
                 </button>
             </div>
         </div>
@@ -176,44 +174,40 @@ https://www.flipkart.com/..."></textarea>
     `;
     pageContent.appendChild(container);
 
-    const textarea = document.getElementById('urlInput');
-    const countEl = document.getElementById('urlCount');
+    const productInput = document.getElementById('productInput');
+    const statusEl = document.getElementById('productStatus');
     const btn = document.getElementById('scrapeUrlsBtn');
 
-    textarea.addEventListener('input', () => {
-        const urls = textarea.value.trim().split('\n').filter(u => u.trim().startsWith('http'));
-        countEl.textContent = `${urls.length} URL${urls.length !== 1 ? 's' : ''}`;
-        btn.disabled = urls.length === 0;
+    productInput.addEventListener('input', () => {
+        const query = productInput.value.trim();
+        statusEl.textContent = query ? `Ready to scrape: "${query}"` : 'Waiting for product input';
+        btn.disabled = query.length < 2;
     });
 
     btn.addEventListener('click', async () => {
-        const urls = textarea.value.trim().split('\n')
-            .map(u => u.trim())
-            .filter(u => u.startsWith('http'));
-
-        if (urls.length === 0) return;
-        if (urls.length > 10) {
-            showToast('Maximum 10 URLs at a time');
+        const query = productInput.value.trim();
+        if (query.length < 2) {
+            showToast('Please enter at least 2 characters');
             return;
         }
 
         btn.disabled = true;
         btn.innerHTML = `
             <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-            Scraping ${urls.length} URL${urls.length > 1 ? 's' : ''}...
+            Scraping "${query}"...
         `;
-        showToast(`Scraping ${urls.length} product link${urls.length > 1 ? 's' : ''}...`);
+        showToast(`Scraping "${query}" across configured sites...`);
 
         try {
-            const res = await fetch(`${API_BASE.replace('/scraper', '')}/scrape-urls`, {
+            const res = await fetch(`${API_BASE.replace('/scraper', '')}/scrape-product`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ urls }),
+                body: JSON.stringify({ product_query: query }),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
 
-            showToast(`✅ Scraped ${data.successful}/${data.total} products successfully`);
+            showToast(`✅ Scraped ${data.successful}/${data.total} sites successfully`);
             displayComparisonResults(data.products);
         } catch (err) {
             showToast(`❌ Scrape failed: ${err.message}`);
@@ -221,7 +215,7 @@ https://www.flipkart.com/..."></textarea>
             btn.disabled = false;
             btn.innerHTML = `
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                Scrape & Compare
+                Scrape Across Sites
             `;
         }
     });
